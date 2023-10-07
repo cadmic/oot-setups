@@ -83,8 +83,8 @@ bool PosAngleSetup::essRight(int n) {
 bool PosAngleSetup::move(u16 movementAngle, f32 xzSpeed, f32 ySpeed,
                          bool* onGround) {
   // printf(
-  //     "move x=%.9g y=%.9g z=%.9g movementAngle=%04x xzSpeed=%.9g
-  //     ySpeed=%.9g\n", this->pos.x, this->pos.y, this->pos.z, this->angle,
+  //     "move x=%.9g y=%.9g z=%.9g movementAngle=%04x xzSpeed=%.9g "
+  //     "ySpeed=%.9g\n", this->pos.x, this->pos.y, this->pos.z, this->angle,
   //     xzSpeed, ySpeed);
 
   // TODO: move this math somewhere common
@@ -109,9 +109,26 @@ bool PosAngleSetup::move(u16 movementAngle, f32 xzSpeed, f32 ySpeed,
   return true;
 }
 
+bool PosAngleSetup::settle() {
+  bool onGround;
+  Vec3f prevPos;
+  do {
+    prevPos = this->pos;
+    if (!move(this->angle, 0, -4.0f, &onGround)) {
+      return false;
+    }
+
+    if (!onGround) {
+      return false;
+    }
+  } while (pos != prevPos);
+
+  return true;
+}
+
 bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
   u16 facingAngle = this->angle;
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 11; i++) {
     Math_ScaledStepToS(&movementAngle, facingAngle, 2000);
     Math_ScaledStepToS(&facingAngle, movementAngle, 2000);
 
@@ -119,10 +136,8 @@ bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
     f32 xzSpeed;
     if (i < 1) {
       xzSpeed = 2.0f;
-    } else if (i < 11) {
-      xzSpeed = 3.0f;
     } else {
-      xzSpeed = 0.0f;
+      xzSpeed = 3.0f;
     }
 
     bool onGround;
@@ -135,6 +150,10 @@ bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
     }
   }
 
+  if (!settle()) {
+    return false;
+  }
+
   if (retarget) {
     this->angle = facingAngle;
   }
@@ -142,15 +161,13 @@ bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
 }
 
 bool PosAngleSetup::longroll() {
-  for (int i = 0; i < 13; i++) {
-    // 11 frames of roll up to 9 speed, 1 frame of 1 speed, 1 frame of 0 speed
+  for (int i = 0; i < 12; i++) {
+    // 11 frames of roll up to 9 speed, 1 frame of 1 speed
     f32 xzSpeed = 0.0f;
     if (i < 11) {
       xzSpeed = std::min(xzSpeed + 2.0f, 9.0f);
-    } else if (i < 12) {
-      xzSpeed = 1.0f;
     } else {
-      xzSpeed = 0.0f;
+      xzSpeed = 1.0f;
     }
 
     bool onGround;
@@ -162,6 +179,10 @@ bool PosAngleSetup::longroll() {
     if (!onGround) {
       return false;
     }
+  }
+
+  if (!settle()) {
+    return false;
   }
 
   return true;
@@ -189,10 +210,7 @@ bool PosAngleSetup::jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed) {
     return false;
   }
 
-  if (!move(movementAngle, 0, -4.0f, &onGround)) {
-    return false;
-  }
-  if (!onGround) {
+  if (!settle()) {
     return false;
   }
 

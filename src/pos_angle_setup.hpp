@@ -76,6 +76,7 @@ struct PosAngleSetup {
 
   bool essLeft(int n);
   bool essRight(int n);
+  bool settle();
   bool move(u16 movementAngle, f32 xzSpeed, f32 ySpeed, bool* onGround);
   bool roll(u16 movementAngle, bool retarget);
   bool longroll();
