@@ -43,6 +43,12 @@ struct Vec3s {
 
   Vec3s() : x(0), y(0), z(0) {}
   Vec3s(s16 x, s16 y, s16 z) : x(x), y(y), z(z) {}
+
+  bool operator==(const Vec3s& rhs) const {
+    return x == rhs.x && y == rhs.y && z == rhs.z;
+  }
+
+  bool operator!=(const Vec3s& rhs) const { return !(*this == rhs); }
 };
 
 struct Vec3f {
