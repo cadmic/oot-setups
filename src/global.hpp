@@ -44,6 +44,14 @@ struct Vec3s {
   Vec3s() : x(0), y(0), z(0) {}
   Vec3s(s16 x, s16 y, s16 z) : x(x), y(y), z(z) {}
 
+  Vec3s operator+(const Vec3s& rhs) const {
+    return Vec3s(x + rhs.x, y + rhs.y, z + rhs.z);
+  }
+
+  Vec3s operator-(const Vec3s& rhs) const {
+    return Vec3s(x - rhs.x, y - rhs.y, z - rhs.z);
+  }
+
   bool operator==(const Vec3s& rhs) const {
     return x == rhs.x && y == rhs.y && z == rhs.z;
   }
@@ -61,15 +69,15 @@ struct Vec3f {
   Vec3s toVec3s() const { return Vec3s{(s16)x, (s16)y, (s16)z}; }
 
   Vec3f operator+(const Vec3f& rhs) const {
-    return Vec3f{x + rhs.x, y + rhs.y, z + rhs.z};
+    return Vec3f(x + rhs.x, y + rhs.y, z + rhs.z);
   }
 
   Vec3f operator-(const Vec3f& rhs) const {
-    return Vec3f{x - rhs.x, y - rhs.y, z - rhs.z};
+    return Vec3f(x - rhs.x, y - rhs.y, z - rhs.z);
   }
 
   Vec3f operator*(const f32& rhs) const {
-    return Vec3f{x * rhs, y * rhs, z * rhs};
+    return Vec3f(x * rhs, y * rhs, z * rhs);
   }
 
   bool operator==(const Vec3f& rhs) const {
