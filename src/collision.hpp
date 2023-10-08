@@ -82,6 +82,7 @@ struct Collision {
   std::vector<CollisionPoly*> floors;
   std::vector<CollisionPoly*> ceilings;
 
+  CollisionHeader* header;
   PlayerAge age;
   Vec3s* vtxList;
   CollisionPoly* polyList;

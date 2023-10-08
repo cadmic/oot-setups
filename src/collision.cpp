@@ -94,6 +94,14 @@ s32 CollisionPoly_LineVsPoly(CollisionPoly* poly, Vec3s* vtxList, Vec3f posA,
               planeIntersect->x, planeIntersect->y, 1.0f));
 }
 
+u32 SurfaceType_GetData(Collision* col, CollisionPoly* poly, s32 dataIdx) {
+  return col->header->surfaceTypeList[poly->type].data[dataIdx];
+}
+
+u32 SurfaceType_IsSoft(Collision* col, CollisionPoly* poly) {
+  return SurfaceType_GetData(col, poly, 0) >> 30 & 1;
+}
+
 void BgCheck_ComputeWallDisplacement(CollisionPoly* poly, f32* posX, f32* posZ,
                                      Vec3f normal, f32 invXZlength,
                                      f32 planeDist, f32 radius) {
@@ -591,6 +599,10 @@ bool BgCheck_RaycastDownStatic(Collision* col, Vec3f pos, f32* floorHeight,
     result = true;
   }
 
+  if (*floorHeight != BGCHECK_Y_MIN && SurfaceType_IsSoft(col, *floorPoly)) {
+    *floorHeight -= 1.0f;
+  }
+
   return result;
 }
 
@@ -680,6 +692,7 @@ bool BgCheck_RaycastDownImpl(Collision* col, Vec3f pos, f32* floorHeight,
 }
 
 Collision::Collision(CollisionHeader* header, PlayerAge age) {
+  this->header = header;
   this->age = age;
   this->vtxList = header->vertices;
   this->polyList = header->polys;
@@ -687,6 +700,7 @@ Collision::Collision(CollisionHeader* header, PlayerAge age) {
 
 Collision::Collision(CollisionHeader* header, PlayerAge age, Vec3f min,
                      Vec3f max) {
+  this->header = header;
   this->age = age;
   this->vtxList = header->vertices;
   this->polyList = header->polys;
