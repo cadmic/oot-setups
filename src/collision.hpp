@@ -107,6 +107,9 @@ struct Collision {
   // Snap down to the nearest floor below the given position
   Vec3f findFloor(Vec3f pos);
 
+  // Run line test for entities
+  Vec3f entityLineTest(Vec3f pos, Vec3f target, bool checkWalls,
+                       bool checkFloors, CollisionPoly** outPoly);
   // Run line test for camera
   Vec3f cameraLineTest(Vec3f pos, Vec3f target, CollisionPoly** outPoly);
   // Find floor for camera

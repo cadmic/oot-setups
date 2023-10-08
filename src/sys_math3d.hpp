@@ -46,6 +46,7 @@ struct Linef {
   Vec3f b;
 };
 
+f32 Math_Vec3f_DistXYZ(Vec3f* a, Vec3f* b);
 s32 Math3D_PlaneVsLineSegClosestPoint(f32 planeAA, f32 planeAB, f32 planeAC,
                                       f32 planeADist, f32 planeBA, f32 planeBB,
                                       f32 planeBC, f32 planeBDist,

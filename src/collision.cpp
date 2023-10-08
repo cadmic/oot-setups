@@ -178,7 +178,7 @@ bool BgCheck_CheckLineAgainstDyna(Collision* col, Vec3f posA, Vec3f* posB,
 }
 
 bool BgCheck_CheckLineImpl(Collision* col, Vec3f posPrev, Vec3f posNext,
-                           bool checkFloors, bool checkWalls, bool checkDyna,
+                           bool checkWalls, bool checkFloors, bool checkDyna,
                            Vec3f* posIntersect, CollisionPoly** outPoly) {
   bool result = false;
   Vec3f posA = posPrev;
@@ -486,8 +486,8 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
 
       Vec3f posIntersect;
       CollisionPoly* poly;
-      if (BgCheck_CheckLineImpl(col, checkLinePrev, checkLineNext, checkFloors,
-                                true, true, &posIntersect, &poly)) {
+      if (BgCheck_CheckLineImpl(col, checkLinePrev, checkLineNext, true,
+                                checkFloors, true, &posIntersect, &poly)) {
         *wallPoly = poly;
         Vec3f normal = CollisionPoly_GetNormalF(poly);
         f32 nXZDist = sqrtf(SQ(normal.x) + SQ(normal.z));
@@ -528,7 +528,7 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
 
   if (dynaResult || !staticResult) {
     Vec3f posIntersect;
-    if (BgCheck_CheckLineImpl(col, posPrev, *posResult, false, true, false,
+    if (BgCheck_CheckLineImpl(col, posPrev, *posResult, true, false, false,
                               &posIntersect, &poly)) {
       Vec3f normal = CollisionPoly_GetNormalF(poly);
       f32 nXZDist = sqrtf(SQ(normal.x) + SQ(normal.z));
@@ -805,11 +805,11 @@ Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
   return intendedPos;
 }
 
-Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPosy) {
+Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos) {
   CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
   f32 floorHeight;
-  return runChecks(prevPos, intendedPosy, &wallPoly, &floorPoly, &floorHeight);
+  return runChecks(prevPos, intendedPos, &wallPoly, &floorPoly, &floorHeight);
 }
 
 Vec3f Collision::findFloor(Vec3f pos) {
@@ -817,6 +817,14 @@ Vec3f Collision::findFloor(Vec3f pos) {
   CollisionPoly* poly;
   BgCheck_RaycastDownImpl(this, pos, &floorHeight, &poly);
   return Vec3f(pos.x, floorHeight, pos.z);
+}
+
+Vec3f Collision::entityLineTest(Vec3f pos, Vec3f target, bool checkWalls,
+                                bool checkFloors, CollisionPoly** outPoly) {
+  *outPoly = NULL;
+  BgCheck_CheckLineImpl(this, pos, target, checkWalls, checkFloors, true,
+                        &target, outPoly);
+  return target;
 }
 
 Vec3f Collision::cameraLineTest(Vec3f pos, Vec3f target,

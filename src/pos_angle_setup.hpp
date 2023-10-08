@@ -10,6 +10,7 @@
 #define ACTIONS                      \
   X(ROLL)                            \
   X(LONGROLL)                        \
+  X(SHIELD_SCOOT)                    \
   X(SIDEHOP_LEFT)                    \
   X(SIDEHOP_LEFT_SIDEROLL)           \
   X(SIDEHOP_LEFT_SIDEROLL_RETARGET)  \
@@ -19,6 +20,15 @@
   X(BACKFLIP)                        \
   X(BACKFLIP_SIDEROLL)               \
   X(BACKFLIP_SIDEROLL_RETARGET)      \
+  X(HORIZONTAL_SLASH)                \
+  X(HORIZONTAL_SLASH_SHIELD)         \
+  X(DIAGONAL_SLASH)                  \
+  X(DIAGONAL_SLASH_SHIELD)           \
+  X(VERTICAL_SLASH)                  \
+  X(VERTICAL_SLASH_SHIELD)           \
+  X(FORWARD_STAB)                    \
+  X(FORWARD_STAB_SHIELD)             \
+  X(CROUCH_STAB)                     \
   X(TURN_ESS_LEFT)                   \
   X(TURN_2_ESS_LEFT)                 \
   X(TURN_3_ESS_LEFT)                 \
@@ -47,6 +57,8 @@ enum Action {
 const char* actionName(Action action);
 int actionCost(Action action);
 int actionsCost(const std::vector<Action>& action);
+
+struct SwordSlash;
 
 struct PosAngleSetup {
   Collision* col;
@@ -77,8 +89,13 @@ struct PosAngleSetup {
   bool essLeft(int n);
   bool essRight(int n);
   bool settle();
-  bool move(u16 movementAngle, f32 xzSpeed, f32 ySpeed, bool* onGround);
+  bool move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed, f32 ySpeed,
+            bool* onGround);
+  bool moveOnGround(Vec3f prevPos, u16 movementAngle, f32 xzSpeed, f32 ySpeed);
   bool roll(u16 movementAngle, bool retarget);
   bool longroll();
+  bool shieldScoot();
   bool jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed);
+  bool swordSlash(const SwordSlash& slash, bool lunge, bool shield);
+  bool crouchStab();
 };
