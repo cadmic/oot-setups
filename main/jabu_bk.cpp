@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "actor.hpp"
 #include "camera.hpp"
 #include "collision.hpp"
 #include "collision_jabu.hpp"
@@ -44,8 +45,7 @@ bool simulateHess(Collision* col, Vec3f pos, f32 speed, u16 startAngle,
     }
 
     yvel -= 1.0f;
-    Vec3f velocity = {Math_SinS(rot) * speed, yvel, Math_CosS(rot) * speed};
-    Vec3f posNext = pos + velocity * 1.5f;
+    Vec3f posNext = translate(pos, rot, speed, yvel);
 
     // Collision check
     CollisionPoly* wallPoly;
@@ -118,9 +118,7 @@ bool testClip(Collision* col, f32 x, f32 z, u16 angle, bool debug) {
            floatToInt(pos.z), angle);
   }
 
-  f32 speed = -18;
-  Vec3f velocity = {Math_SinS(angle) * speed, -5, Math_CosS(angle) * speed};
-  Vec3f posNext = pos + velocity * 1.5f;
+  Vec3f posNext = translate(pos, angle, -18.0f, -5.0f);
 
   if (debug) {
     printf("posNext: x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x)\n", posNext.x,
@@ -180,12 +178,6 @@ void findClipRegion(Collision* col, f32 x) {
   }
 }
 
-Vec3f rotate(Vec3f v, u16 angle) {
-  f32 s = Math_SinS(angle);
-  f32 c = Math_CosS(angle);
-  return {v.z * s + v.x * c, v.y, v.z * c - v.x * s};
-}
-
 u16 predictHessAngle(u16 angle) {
   Vec3f bombPos = rotate(Vec3f(-8.56731033f, 0.0f, 3.83789444f), angle);
   Vec3f linkPos = rotate(Vec3f(0, 0, -33), angle);
@@ -197,12 +189,6 @@ void printHessAngles() {
     u16 hessAngle = predictHessAngle(angle);
     printf("angle: %04x hessAngle: %04x\n", angle, hessAngle);
   }
-}
-
-Vec3f translate(Vec3f pos, u16 angle, f32 xzSpeed, f32 ySpeed) {
-  Vec3f velocity = {Math_SinS(angle) * xzSpeed, ySpeed,
-                    Math_CosS(angle) * xzSpeed};
-  return pos + velocity * 1.5f;
 }
 
 Vec3f move(Collision* col, Vec3f pos, u16 angle, f32 speed) {

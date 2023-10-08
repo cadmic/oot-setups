@@ -1,5 +1,6 @@
 #include "pos_angle_setup.hpp"
 
+#include "actor.hpp"
 #include "camera_angles.hpp"
 #include "sys_math.hpp"
 
@@ -87,10 +88,7 @@ bool PosAngleSetup::move(u16 movementAngle, f32 xzSpeed, f32 ySpeed,
   //     "ySpeed=%.9g\n", this->pos.x, this->pos.y, this->pos.z, this->angle,
   //     xzSpeed, ySpeed);
 
-  // TODO: move this math somewhere common
-  Vec3f velocity = {Math_SinS(movementAngle) * xzSpeed, ySpeed - 1.0f,
-                    Math_CosS(movementAngle) * xzSpeed};
-  Vec3f intendedPos = pos + velocity * 1.5f;
+  Vec3f intendedPos = translate(pos, movementAngle, xzSpeed, ySpeed - 1.0f);
 
   CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
