@@ -25,8 +25,16 @@
 // TODO: import more camera data
 CameraNormalSettings cameraNormalSettings[] = {
     {},  // CAM_SET_NONE
-    {},  // CAM_SET_NORMAL0
-    {},  // CAM_SET_NORMAL1
+    CAM_FUNCDATA_NORM1(
+        -20, 200, 300, 10, 12, 10, 35, 60, 60,
+        CAM_INTERFACE_FIELD(
+            CAM_LETTERBOX_NONE, CAM_HUD_VISIBILITY_ALL,
+            NORMAL1_FLAG_1 | NORMAL1_FLAG_0)),  // CAM_SET_NORMAL0
+    CAM_FUNCDATA_NORM1(
+        0, 200, 400, 10, 12, 20, 40, 60, 60,
+        CAM_INTERFACE_FIELD(
+            CAM_LETTERBOX_NONE, CAM_HUD_VISIBILITY_ALL,
+            NORMAL1_FLAG_1 | NORMAL1_FLAG_0)),  // CAM_SET_NORMAL1
     CAM_FUNCDATA_NORM1(
         -10, 150, 250, 5, 10, 5, 30, 60, 60,
         CAM_INTERFACE_FIELD(
@@ -107,8 +115,17 @@ CameraNormalSettings cameraNormalSettings[] = {
 
 CameraZParallelSettings cameraZParallelSettings[] = {
     {},  // CAM_SET_NONE
-    {},  // CAM_SET_NORMAL0
-    {},  // CAM_SET_NORMAL1
+    CAM_FUNCDATA_PARA1(
+        -20, 250, 0, 0, 5, 5, 45, 50,
+        CAM_INTERFACE_FIELD(CAM_LETTERBOX_MEDIUM, CAM_HUD_VISIBILITY_ALL,
+                            PARALLEL1_FLAG_3 | PARALLEL1_FLAG_1),
+        -40,
+        20),  // CAM_SET_NORMAL0
+    CAM_FUNCDATA_PARA1(
+        0, 250, 0, 0, 5, 5, 45, 50,
+        CAM_INTERFACE_FIELD(CAM_LETTERBOX_MEDIUM, CAM_HUD_VISIBILITY_ALL,
+                            PARALLEL1_FLAG_1),
+        -40, 20),  // CAM_SET_NORMAL1
     CAM_FUNCDATA_PARA1(
         -20, 150, 0, 0, 5, 5, 45, 50,
         CAM_INTERFACE_FIELD(CAM_LETTERBOX_MEDIUM, CAM_HUD_VISIBILITY_ALL,
