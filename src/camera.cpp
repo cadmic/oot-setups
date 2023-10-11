@@ -341,20 +341,20 @@ void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
   this->xzSpeed = 0;
   this->dist = dist;
   this->speedRatio = 0;
-  this->yawUpdateRateTarget = 0;
-  this->rUpdateRateTimer = 10;
 
   // Not directly set, but we reach these values eventually if Link moves
   // around
   this->rUpdateRateInv = 20.0f;
   this->pitchUpdateRateInv = 2.0f;
   this->yawUpdateRateInv = 5.0f;
-
   this->atLERPStepScale = 0.5f;
+
+  this->yawUpdateRateTarget = 0;
+  this->rUpdateRateTimer = 10;
+  this->slopePitchAdj = 0;
 
   this->floorYNear = pos.y;
   this->floorYFar = pos.y;
-  this->slopePitchAdj = 0;
 
   this->wallPoly = NULL;
   this->floorPoly = NULL;
@@ -384,9 +384,9 @@ void Camera::updateNormal1(Collision* col, Vec3f pos, u16 angle, int setting) {
     this->setting = setting;
     this->mode = 0;
 
-    // TODO: test this
     this->slopePitchAdj = 0;
     this->rUpdateRateTimer = 10;
+    // TODO: split this into this->xzSpeed and a replacement for rwData->unk_20
     this->xzSpeed = xzSpeed;
     this->yawUpdateRateTarget = yawUpdateRateTarget;
   }
