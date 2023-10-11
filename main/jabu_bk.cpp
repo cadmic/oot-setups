@@ -89,7 +89,7 @@ void findHessPositions(Collision* col, u16 angle, f32 speed) {
       }
 
       // camera consistency check
-      Camera camera;
+      Camera camera(PLAYER_AGE_ADULT);
       int setting = 3;  // TODO use floor
       u16 facingAngle = angle - (7 * 0x708) + 0x48;
       camera.initParallel1(pos, facingAngle, setting);
@@ -218,7 +218,7 @@ bool testHessSetup(Collision* col, Vec3f pos, u16 angle,
   setup.performActions(actions);
   pos = setup.pos;
 
-  Camera camera;
+  Camera camera(PLAYER_AGE_ADULT);
   int setting = 3;
   camera.initParallel1(pos, angle, setting);
   camera.updateNormal1(col, pos, angle, setting);
@@ -273,7 +273,7 @@ bool testHessSetup(Collision* col, Vec3f pos, u16 angle,
 
 bool testHbHessSetup(Collision* col, Vec3f pos, u16 angle, u16 essDir,
                      bool debug) {
-  Camera camera;
+  Camera camera(PLAYER_AGE_ADULT);
   int setting = 3;
   camera.initParallel1(pos, angle, setting);
   camera.updateNormal1(col, pos, angle, setting);
@@ -385,7 +385,7 @@ void findHessSetupPositions(Collision* col) {
 
 void cameraTurn(PosAngleSetup* setup, u16 increment) {
   int setting = 3;  // TODO: use correct setting
-  Camera camera;
+  Camera camera(PLAYER_AGE_ADULT);
   camera.initParallel1(setup->pos, setup->angle, setting);
   camera.updateNormal1(setup->col, setup->pos, setup->angle, setting);
   u16 angle = camera.yaw() + increment;

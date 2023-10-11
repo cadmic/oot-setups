@@ -16,6 +16,7 @@ struct Camera {
   Vec3f eyeNext;    // Where the camera wants to be
   Vec3f eye;        // Where the camera is
 
+  f32 playerHeight;
   f32 xzSpeed;
   f32 dist;
   f32 speedRatio;
@@ -34,6 +35,8 @@ struct Camera {
 
   CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
+
+  Camera(PlayerAge age);
 
   u16 yaw();
   // Initialize the camera as if we've been targeting for a while.

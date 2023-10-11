@@ -7,7 +7,6 @@
 #define ABS std::abs
 #define CAM_DATA_SCALED(x) ((x)*0.01f)
 
-const f32 playerHeight = 68.0f;  // Adult link
 const f32 xzOffsetUpdateRate = 0.05f;
 const f32 yOffsetUpdateRate = 0.05f;
 
@@ -164,9 +163,9 @@ s16 Camera_GetPitchAdjFromFloorHeightDiffs(Camera* camera, Collision* col,
 
   Vec3f viewForwards = {Math_SinS(viewYaw), 0.0f, Math_CosS(viewYaw)};
 
-  f32 checkOffsetY = 1.2f * playerHeight;
-  f32 nearDist = playerHeight;
-  f32 farDist = 2.5f * playerHeight;
+  f32 checkOffsetY = 1.2f * camera->playerHeight;
+  f32 nearDist = camera->playerHeight;
+  f32 farDist = 2.5f * camera->playerHeight;
 
   Vec3f playerPos = camera->playerPos;
   playerPos.y = playerGroundY + checkOffsetY;
@@ -224,7 +223,7 @@ f32 Camera_ClampLERPScale(Camera* camera, f32 maxLERPScale) {
 }
 
 void Camera_CalcAtDefault(Camera* camera, f32 yOffset) {
-  Vec3f atOffsetTarget = {0, playerHeight + yOffset, 0};
+  Vec3f atOffsetTarget = {0, camera->playerHeight + yOffset, 0};
   Camera_LERPCeilVec3f(&atOffsetTarget, &camera->atOffset, yOffsetUpdateRate,
                        xzOffsetUpdateRate, 0.1f);
   Vec3f atTarget = camera->playerPos + camera->atOffset;
@@ -300,6 +299,10 @@ u16 Camera_CalcDefaultYaw(Camera* camera, u16 cur, u16 target, f32 maxYawUpdate,
   return cur + (s16)(angDelta * velocity * velFactor * yawUpdRate);
 }
 
+Camera::Camera(PlayerAge age) {
+  this->playerHeight = age == PLAYER_AGE_CHILD ? 44.0f : 68.0f;
+}
+
 u16 Camera::yaw() {
   VecGeo result;
   OLib_Vec3fDiffToVecGeo(&result, &this->eye, &this->at);
@@ -308,16 +311,17 @@ u16 Camera::yaw() {
 
 void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
   CameraZParallelSettings* settings = &cameraZParallelSettings[setting];
-  f32 yNormal = 1.0f + (-0.1f) - (-0.1f * (68.0f / playerHeight));
-  f32 yOffset = CAM_DATA_SCALED(settings->yOffset) * playerHeight * yNormal;
-  f32 dist = CAM_DATA_SCALED(settings->dist) * playerHeight * yNormal;
+  f32 yNormal = 1.0f - 0.1f - (-0.1f * (68.0f / this->playerHeight));
+  f32 yOffset =
+      CAM_DATA_SCALED(settings->yOffset) * this->playerHeight * yNormal;
+  f32 dist = CAM_DATA_SCALED(settings->dist) * this->playerHeight * yNormal;
 
   this->setting = setting;
   this->mode = 1;
   this->frames = -1;
 
   this->playerPos = pos;
-  this->atOffset = Vec3f(0, playerHeight + yOffset, 0);
+  this->atOffset = Vec3f(0, this->playerHeight + yOffset, 0);
   this->at = pos + this->atOffset;
 
   VecGeo target = {
@@ -358,8 +362,8 @@ void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
 
 void Camera::updateNormal1(Collision* col, Vec3f pos, u16 angle, int setting) {
   CameraNormalSettings* settings = &cameraNormalSettings[setting];
-  f32 yNormal = 1.0f + (-0.1f) - (-0.1f * (68.0f / playerHeight));
-  f32 t = yNormal * (playerHeight * 0.01f);
+  f32 yNormal = 1.0f - 0.1f - (-0.1f * (68.0f / this->playerHeight));
+  f32 t = yNormal * (this->playerHeight * 0.01f);
   f32 yOffset = settings->yOffset * t;
   f32 distMin = settings->distMin * t;
   f32 distMax = settings->distMax * t;
