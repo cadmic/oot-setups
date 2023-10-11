@@ -118,8 +118,8 @@ Vec3f* Camera_AddVecGeoToVec3f(Vec3f* dest, Vec3f* a, VecGeo* geo) {
   return dest;
 }
 
-bool Camera_BGCheckInfo(Camera* camera, Collision* col, Vec3f from, Vec3f to,
-                        Vec3f* result, Vec3f* normal) {
+bool Camera_BGCheckInfo(Camera* camera, Vec3f from, Vec3f to, Vec3f* result,
+                        Vec3f* normal) {
   VecGeo fromToOffset;
   OLib_Vec3fDiffToVecGeo(&fromToOffset, &from, &to);
   fromToOffset.r += 8.0f;
@@ -127,7 +127,8 @@ bool Camera_BGCheckInfo(Camera* camera, Collision* col, Vec3f from, Vec3f to,
   Vec3f toPoint;
   Camera_AddVecGeoToVec3f(&toPoint, &from, &fromToOffset);
 
-  Vec3f lineResult = col->cameraLineTest(from, toPoint, &camera->wallPoly);
+  Vec3f lineResult =
+      camera->col->cameraLineTest(from, toPoint, &camera->wallPoly);
 
   if (camera->wallPoly) {
     *normal = CollisionPoly_GetNormalF(camera->wallPoly);
@@ -143,9 +144,8 @@ bool Camera_BGCheckInfo(Camera* camera, Collision* col, Vec3f from, Vec3f to,
   }
 }
 
-f32 Camera_GetFloorYLayer(Camera* camera, Collision* col, Vec3f pos,
-                          f32 playerGroundY) {
-  f32 floorY = col->cameraFindFloor(pos, &camera->floorPoly);
+f32 Camera_GetFloorYLayer(Camera* camera, Vec3f pos, f32 playerGroundY) {
+  f32 floorY = camera->col->cameraFindFloor(pos, &camera->floorPoly);
   if (camera->floorPoly) {
     Vec3f normal = CollisionPoly_GetNormalF(camera->floorPoly);
     if (playerGroundY < floorY && normal.y <= 0.5f) {
@@ -156,8 +156,7 @@ f32 Camera_GetFloorYLayer(Camera* camera, Collision* col, Vec3f pos,
   return floorY;
 }
 
-s16 Camera_GetPitchAdjFromFloorHeightDiffs(Camera* camera, Collision* col,
-                                           s16 viewYaw) {
+s16 Camera_GetPitchAdjFromFloorHeightDiffs(Camera* camera, s16 viewYaw) {
   // Assume standing on ground
   f32 playerGroundY = camera->playerPos.y;
 
@@ -172,7 +171,7 @@ s16 Camera_GetPitchAdjFromFloorHeightDiffs(Camera* camera, Collision* col,
 
   if (camera->frames % 2 == 0) {
     Vec3f testPos = playerPos + viewForwards * farDist;
-    Camera_BGCheckInfo(camera, col, playerPos, testPos, &camera->pitchTestPos,
+    Camera_BGCheckInfo(camera, playerPos, testPos, &camera->pitchTestPos,
                        &camera->pitchTestNormal);
   } else {
     farDist = OLib_Vec3fDistXZ(&playerPos, &camera->pitchTestPos);
@@ -181,15 +180,15 @@ s16 Camera_GetPitchAdjFromFloorHeightDiffs(Camera* camera, Collision* col,
 
     if (nearDist > farDist) {
       nearDist = farDist;
-      camera->floorYNear = camera->floorYFar = Camera_GetFloorYLayer(
-          camera, col, camera->pitchTestPos, playerGroundY);
+      camera->floorYNear = camera->floorYFar =
+          Camera_GetFloorYLayer(camera, camera->pitchTestPos, playerGroundY);
     } else {
       Vec3f nearPos = playerPos + viewForwards * nearDist;
 
       camera->floorYNear =
-          Camera_GetFloorYLayer(camera, col, nearPos, playerGroundY);
-      camera->floorYFar = Camera_GetFloorYLayer(
-          camera, col, camera->pitchTestPos, playerGroundY);
+          Camera_GetFloorYLayer(camera, nearPos, playerGroundY);
+      camera->floorYFar =
+          Camera_GetFloorYLayer(camera, camera->pitchTestPos, playerGroundY);
     }
 
     if (camera->floorYNear == BGCHECK_Y_MIN) {
@@ -299,8 +298,9 @@ u16 Camera_CalcDefaultYaw(Camera* camera, u16 cur, u16 target, f32 maxYawUpdate,
   return cur + (s16)(angDelta * velocity * velFactor * yawUpdRate);
 }
 
-Camera::Camera(PlayerAge age) {
-  this->playerHeight = age == PLAYER_AGE_CHILD ? 44.0f : 68.0f;
+Camera::Camera(Collision* col) {
+  this->col = col;
+  this->playerHeight = col->age == PLAYER_AGE_CHILD ? 44.0f : 68.0f;
 }
 
 u16 Camera::yaw() {
@@ -360,7 +360,7 @@ void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
   this->floorPoly = NULL;
 }
 
-void Camera::updateNormal1(Collision* col, Vec3f pos, u16 angle, int setting) {
+void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
   CameraNormalSettings* settings = &cameraNormalSettings[setting];
   f32 yNormal = 1.0f - 0.1f - (-0.1f * (68.0f / this->playerHeight));
   f32 t = yNormal * (this->playerHeight * 0.01f);
@@ -402,7 +402,7 @@ void Camera::updateNormal1(Collision* col, Vec3f pos, u16 angle, int setting) {
   OLib_Vec3fDiffToVecGeo(&atEyeNextGeo, &this->at, &this->eyeNext);
 
   s16 slopePitchTarget =
-      Camera_GetPitchAdjFromFloorHeightDiffs(this, col, atEyeGeo.yaw - 0x7FFF);
+      Camera_GetPitchAdjFromFloorHeightDiffs(this, atEyeGeo.yaw - 0x7FFF);
   f32 pitchAdjStep =
       ((1.0f / pitchUpdateRateTarget) * 0.5f) +
       ((1.0f / pitchUpdateRateTarget) * 0.5f) * (1.0f - this->speedRatio);
@@ -451,7 +451,7 @@ void Camera::updateNormal1(Collision* col, Vec3f pos, u16 angle, int setting) {
   Vec3f collisionPoint;
   Vec3f collisionNormal;
   // TODO: check both ways
-  if (Camera_BGCheckInfo(this, col, this->at, this->eyeNext, &collisionPoint,
+  if (Camera_BGCheckInfo(this, this->at, this->eyeNext, &collisionPoint,
                          &collisionNormal)) {
     VecGeo geoNorm;
     OLib_Vec3fToVecGeo(&geoNorm, &collisionNormal);

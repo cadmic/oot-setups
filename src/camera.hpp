@@ -7,6 +7,7 @@ struct Camera {
   int setting;
   int mode;
   int frames;        // Global frame counter (used by pitch adjustment)
+  Collision* col;    // Collision data
   f32 playerHeight;  // Adult or child height (constant)
 
   Vec3f playerPos;  // Last player position
@@ -39,11 +40,11 @@ struct Camera {
   CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
 
-  Camera(PlayerAge age);
+  Camera(Collision* col);
 
   u16 yaw();
   // Initialize the camera as if we've been targeting for a while.
   void initParallel1(Vec3f pos, u16 angle, int setting);
   // Update untargeted camera.
-  void updateNormal1(Collision* col, Vec3f pos, u16 angle, int setting);
+  void updateNormal1(Vec3f pos, u16 angle, int setting);
 };

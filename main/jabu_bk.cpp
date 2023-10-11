@@ -89,11 +89,11 @@ void findHessPositions(Collision* col, u16 angle, f32 speed) {
       }
 
       // camera consistency check
-      Camera camera(PLAYER_AGE_ADULT);
+      Camera camera(col);
       int setting = 3;  // TODO use floor
       u16 facingAngle = angle - (7 * 0x708) + 0x48;
       camera.initParallel1(pos, facingAngle, setting);
-      camera.updateNormal1(col, pos, facingAngle, setting);
+      camera.updateNormal1(pos, facingAngle, setting);
       if (camera.wallPoly) {
         continue;
       }
@@ -218,23 +218,23 @@ bool testHessSetup(Collision* col, Vec3f pos, u16 angle,
   setup.performActions(actions);
   pos = setup.pos;
 
-  Camera camera(PLAYER_AGE_ADULT);
+  Camera camera(col);
   int setting = 3;
   camera.initParallel1(pos, angle, setting);
-  camera.updateNormal1(col, pos, angle, setting);
+  camera.updateNormal1(pos, angle, setting);
 
   // Dry roll (interrupted)
   pos = move(col, pos, angle, 2.0f);
-  camera.updateNormal1(col, pos, angle, setting);
+  camera.updateNormal1(pos, angle, setting);
   for (int i = 0; i < 4; i++) {
     pos = move(col, pos, angle, 3.0f);
-    camera.updateNormal1(col, pos, angle, setting);
+    camera.updateNormal1(pos, angle, setting);
   }
 
   // 1st damage frame
   pos = move(col, pos, angle, 3.0f);
   u16 hessAngle = Math_Vec3f_Yaw(&pos, &bombPos);
-  camera.updateNormal1(col, pos, hessAngle, setting);
+  camera.updateNormal1(pos, hessAngle, setting);
   u16 damageAngle = camera.yaw();
 
   if (debug) {
@@ -273,10 +273,10 @@ bool testHessSetup(Collision* col, Vec3f pos, u16 angle,
 
 bool testHbHessSetup(Collision* col, Vec3f pos, u16 angle, u16 essDir,
                      bool debug) {
-  Camera camera(PLAYER_AGE_ADULT);
+  Camera camera(col);
   int setting = 3;
   camera.initParallel1(pos, angle, setting);
-  camera.updateNormal1(col, pos, angle, setting);
+  camera.updateNormal1(pos, angle, setting);
 
   if (camera.wallPoly) {
     return false;
@@ -290,7 +290,7 @@ bool testHbHessSetup(Collision* col, Vec3f pos, u16 angle, u16 essDir,
   for (int i = 0; i < 5; i++) {
     speed += 0.35f;
     pos = move(col, pos, angle, speed);
-    camera.updateNormal1(col, pos, angle, setting);
+    camera.updateNormal1(pos, angle, setting);
   }
 
   // 1st damage frame
@@ -302,7 +302,7 @@ bool testHbHessSetup(Collision* col, Vec3f pos, u16 angle, u16 essDir,
     return false;
   }
 
-  camera.updateNormal1(col, pos, hessAngle, setting);
+  camera.updateNormal1(pos, hessAngle, setting);
   u16 damageAngle = camera.yaw();
 
   speed += 0.35f;
@@ -385,9 +385,9 @@ void findHessSetupPositions(Collision* col) {
 
 void cameraTurn(PosAngleSetup* setup, u16 increment) {
   int setting = 3;  // TODO: use correct setting
-  Camera camera(PLAYER_AGE_ADULT);
+  Camera camera(setup->col);
   camera.initParallel1(setup->pos, setup->angle, setting);
-  camera.updateNormal1(setup->col, setup->pos, setup->angle, setting);
+  camera.updateNormal1(setup->pos, setup->angle, setting);
   u16 angle = camera.yaw() + increment;
   setup->angle = angle;
 }

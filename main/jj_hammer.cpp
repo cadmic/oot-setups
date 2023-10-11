@@ -141,18 +141,18 @@ void findBombDrops() {
   }
 }
 
-u16 targetUpAngle(Vec3f pos, u16 angle) {
+u16 targetUpAngle(Collision* col, Vec3f pos, u16 angle) {
   int setting = 4;
-  Camera camera(PLAYER_AGE_ADULT);
+  Camera camera(col);
   camera.initParallel1(pos, angle, setting);
   return camera.yaw();
 }
 
 u16 essUpAngle(Collision* col, Vec3f pos, u16 angle) {
   int setting = 4;
-  Camera camera(PLAYER_AGE_ADULT);
+  Camera camera(col);
   camera.initParallel1(pos, angle, setting);
-  camera.updateNormal1(col, pos, angle, setting);
+  camera.updateNormal1(pos, angle, setting);
   return camera.yaw();
 }
 
@@ -160,7 +160,7 @@ void walkToDoor(Collision* col, Vec3f pos, u16 angle, int numFrames,
                 bool releaseTarget, bool shield, Vec3f* outPos, u16* outAngle,
                 bool debug) {
   f32 speed = 0.0f;
-  u16 movementAngle = targetUpAngle(pos, angle);
+  u16 movementAngle = targetUpAngle(col, pos, angle);
 
   for (int i = 1; i < numFrames + 6; i++) {
     if (debug) {
@@ -338,7 +338,7 @@ bool testPosAngleSetup(Collision* col, const std::vector<Action>& actions,
   }
 
   u16 cameraAngle = essUpAngle(col, pos, angle);
-  u16 walkAngle = targetUpAngle(pos, cameraAngle);
+  u16 walkAngle = targetUpAngle(col, pos, cameraAngle);
   u16 bomb1Angle = angle - ESS;
   u16 bomb2Angle = cameraAngle;
   int walkFrames = 5;
