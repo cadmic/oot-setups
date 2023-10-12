@@ -377,23 +377,18 @@ void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
 
   Vec3f prevPos = this->playerPos;
   this->playerPos = pos;
-
-  f32 xzSpeed = OLib_Vec3fDistXZ(&pos, &prevPos);
+  this->xzSpeed = OLib_Vec3fDistXZ(&pos, &prevPos);
+  this->speedRatio = OLib_ClampMaxDist(this->xzSpeed / 9.0f, 1.0f);
 
   if (this->mode != 0 || setting != this->setting) {
     this->setting = setting;
     this->mode = 0;
 
-    this->slopePitchAdj = 0;
+    this->prevXZSpeed = this->xzSpeed;
     this->rUpdateRateTimer = 10;
-    // TODO: split this into this->xzSpeed and a replacement for rwData->unk_20
-    this->xzSpeed = xzSpeed;
     this->yawUpdateRateTarget = yawUpdateRateTarget;
+    this->slopePitchAdj = 0;
   }
-
-  f32 prevXZSpeed = this->xzSpeed;
-  this->xzSpeed = xzSpeed;
-  this->speedRatio = OLib_ClampMaxDist(this->xzSpeed / 9.0f, 1.0f);
 
   VecGeo atEyeGeo;
   OLib_Vec3fDiffToVecGeo(&atEyeGeo, &this->at, &this->eye);
@@ -417,7 +412,7 @@ void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
   Camera_ClampDist(this, eyeAdjustment.r, distMin, distMax);
   eyeAdjustment.r = this->dist;
 
-  f32 accel = (xzSpeed - prevXZSpeed) * 0.333333f;
+  f32 accel = (this->xzSpeed - this->prevXZSpeed) * 0.333333f;
   //   if (accel > 1.0f) {
   //     accel = 1.0f;
   //   }
@@ -425,6 +420,8 @@ void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
   if (accel > -1.0f) {
     accel = -1.0f;
   }
+
+  this->prevXZSpeed = this->xzSpeed;
 
   this->yawUpdateRateInv = Camera_LERPCeilF(
       this->yawUpdateRateTarget - 0.7f * this->yawUpdateRateTarget * accel,

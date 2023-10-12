@@ -25,6 +25,7 @@ struct Camera {
   f32 atLERPStepScale;
 
   // Normal mode variables
+  f32 prevXZSpeed;          // rwData->unk_20 in decomp
   f32 yawUpdateRateTarget;  // rwData->swing.swingUpdateRate in decomp
   s16 rUpdateRateTimer;     // rwData->unk_28 in decomp
   s16 slopePitchAdj;        // rwData->slopePitchAdj in decomp
