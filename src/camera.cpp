@@ -7,6 +7,16 @@
 #define ABS std::abs
 #define CAM_DATA_SCALED(x) ((x)*0.01f)
 
+// a - b without implementation-defined overflow behavior
+s16 angleDiff(u16 a, u16 b) {
+  u16 diff = a - b;
+  if (diff >= 0x8000) {
+    return diff - 0x10000;
+  } else {
+    return diff;
+  }
+}
+
 const f32 xzOffsetUpdateRate = 0.05f;
 const f32 yOffsetUpdateRate = 0.05f;
 
@@ -157,7 +167,7 @@ f32 Camera_GetFloorYLayer(Camera* camera, Vec3f pos, f32 playerGroundY) {
 }
 
 s16 Camera_GetPitchAdjFromFloorHeightDiffs(Camera* camera, s16 viewYaw) {
-  // Assume standing on ground
+  // TODO: we assume player is standing on ground
   f32 playerGroundY = camera->playerPos.y;
 
   Vec3f viewForwards = {Math_SinS(viewYaw), 0.0f, Math_CosS(viewYaw)};
@@ -230,22 +240,30 @@ void Camera_CalcAtDefault(Camera* camera, f32 yOffset) {
                        camera->atLERPStepScale, 0.2f);
 }
 
-void Camera_ClampDist(Camera* camera, f32 dist, f32 minDist, f32 maxDist) {
-  if (camera->rUpdateRateTimer != 0) {
-    camera->rUpdateRateTimer--;
-  }
+void Camera_CalcAtForParallel(Camera* camera, f32 yOffset) {
+  // TODO: we assume player is standing on ground. This ends up being identical
+  // to Camera_CalcAtDefault
+  Vec3f atOffsetTarget = {0, camera->playerHeight + yOffset, 0};
+  Camera_LERPCeilVec3f(&atOffsetTarget, &camera->atOffset, yOffsetUpdateRate,
+                       xzOffsetUpdateRate, 0.1f);
+  Vec3f atTarget = camera->playerPos + camera->atOffset;
+  Camera_LERPCeilVec3f(&atTarget, &camera->at, camera->atLERPStepScale,
+                       camera->atLERPStepScale, 0.2f);
+}
 
+void Camera_ClampDist(Camera* camera, f32 dist, f32 minDist, f32 maxDist,
+                      int timer) {
   f32 distTarget;
   f32 rUpdateRateInvTarget;
   if (dist < minDist) {
     distTarget = minDist;
-    rUpdateRateInvTarget = camera->rUpdateRateTimer != 0 ? 10.0f : 20.0f;
+    rUpdateRateInvTarget = timer != 0 ? 10.0f : 20.0f;
   } else if (dist > maxDist) {
     distTarget = maxDist;
-    rUpdateRateInvTarget = camera->rUpdateRateTimer != 0 ? 10.0f : 20.0f;
+    rUpdateRateInvTarget = timer != 0 ? 10.0f : 20.0f;
   } else {
     distTarget = dist;
-    rUpdateRateInvTarget = camera->rUpdateRateTimer != 0 ? 20.0f : 1.0f;
+    rUpdateRateInvTarget = timer != 0 ? 20.0f : 1.0f;
   }
   camera->rUpdateRateInv = Camera_LERPCeilF(rUpdateRateInvTarget,
                                             camera->rUpdateRateInv, 0.5f, 0.1f);
@@ -279,7 +297,7 @@ s16 Camera_CalcDefaultPitch(Camera* camera, s16 pitch, s16 pitchTarget,
 
 u16 Camera_CalcDefaultYaw(Camera* camera, u16 cur, u16 target, f32 maxYawUpdate,
                           f32 accel) {
-  s16 angDelta = target - (cur - 0x7FFF);
+  s16 angDelta = angleDiff(target, cur - 0x7FFF);
   f32 speedT;
   if (camera->xzSpeed > 0.001f) {
     speedT = (s16)((u16)angDelta - 0x7FFF) * (1.0f / 32767.0f);
@@ -299,17 +317,12 @@ u16 Camera_CalcDefaultYaw(Camera* camera, u16 cur, u16 target, f32 maxYawUpdate,
 }
 
 Camera::Camera(Collision* col) {
+  memset(this, 0, sizeof(Camera));
   this->col = col;
   this->playerHeight = col->age == PLAYER_AGE_CHILD ? 44.0f : 68.0f;
 }
 
-u16 Camera::yaw() {
-  VecGeo result;
-  OLib_Vec3fDiffToVecGeo(&result, &this->eye, &this->at);
-  return result.yaw;
-}
-
-void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
+void Camera::initParallel(Vec3f pos, u16 angle, int setting) {
   CameraZParallelSettings* settings = &cameraZParallelSettings[setting];
   f32 yNormal = 1.0f - 0.1f - (-0.1f * (68.0f / this->playerHeight));
   f32 yOffset =
@@ -318,6 +331,7 @@ void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
 
   this->setting = setting;
   this->mode = 1;
+  this->modeChangeDisallowed = false;
   this->frames = -1;
 
   this->playerPos = pos;
@@ -339,19 +353,18 @@ void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
   this->eye = this->eyeNext - norm;
 
   this->xzSpeed = 0;
-  this->dist = dist;
   this->speedRatio = 0;
 
-  // Not directly set, but we reach these values eventually if Link moves
-  // around
+  // Not directly set, but we reach these values eventually if the player moves
+  // around a bit
+  this->dist = dist;
   this->rUpdateRateInv = 20.0f;
   this->pitchUpdateRateInv = 2.0f;
   this->yawUpdateRateInv = 5.0f;
   this->atLERPStepScale = 0.5f;
 
-  this->yawUpdateRateTarget = 0;
-  this->rUpdateRateTimer = 10;
-  this->slopePitchAdj = 0;
+  this->parallelAnimTimer = 0;
+  this->parallelYawTarget = angle - 0x7FFF;
 
   this->floorYNear = pos.y;
   this->floorYFar = pos.y;
@@ -360,10 +373,10 @@ void Camera::initParallel1(Vec3f pos, u16 angle, int setting) {
   this->floorPoly = NULL;
 }
 
-void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
+void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
   CameraNormalSettings* settings = &cameraNormalSettings[setting];
-  f32 yNormal = 1.0f - 0.1f - (-0.1f * (68.0f / this->playerHeight));
-  f32 t = yNormal * (this->playerHeight * 0.01f);
+  f32 yNormal = 1.0f - 0.1f - (-0.1f * (68.0f / camera->playerHeight));
+  f32 t = yNormal * (camera->playerHeight * 0.01f);
   f32 yOffset = settings->yOffset * t;
   f32 distMin = settings->distMin * t;
   f32 distMax = settings->distMax * t;
@@ -373,46 +386,44 @@ void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
   f32 maxYawUpdate = CAM_DATA_SCALED(settings->maxYawUpdate);
   f32 atLERPScaleMax = CAM_DATA_SCALED(settings->atLerpStepScale);
 
-  this->frames++;
+  if (camera->mode != 0 || setting != camera->setting) {
+    camera->setting = setting;
+    camera->mode = 0;
 
-  Vec3f prevPos = this->playerPos;
-  this->playerPos = pos;
-  this->xzSpeed = OLib_Vec3fDistXZ(&pos, &prevPos);
-  this->speedRatio = OLib_ClampMaxDist(this->xzSpeed / 9.0f, 1.0f);
+    camera->normalPrevXZSpeed = camera->xzSpeed;
+    camera->normalRUpdateRateTimer = 10;
+    camera->normalYawUpdateRateTarget = yawUpdateRateTarget;
+    camera->normalSlopePitchAdj = 0;
+  }
 
-  if (this->mode != 0 || setting != this->setting) {
-    this->setting = setting;
-    this->mode = 0;
-
-    this->prevXZSpeed = this->xzSpeed;
-    this->rUpdateRateTimer = 10;
-    this->yawUpdateRateTarget = yawUpdateRateTarget;
-    this->slopePitchAdj = 0;
+  if (camera->normalRUpdateRateTimer != 0) {
+    camera->normalRUpdateRateTimer--;
   }
 
   VecGeo atEyeGeo;
-  OLib_Vec3fDiffToVecGeo(&atEyeGeo, &this->at, &this->eye);
+  OLib_Vec3fDiffToVecGeo(&atEyeGeo, &camera->at, &camera->eye);
 
   VecGeo atEyeNextGeo;
-  OLib_Vec3fDiffToVecGeo(&atEyeNextGeo, &this->at, &this->eyeNext);
+  OLib_Vec3fDiffToVecGeo(&atEyeNextGeo, &camera->at, &camera->eyeNext);
 
   s16 slopePitchTarget =
-      Camera_GetPitchAdjFromFloorHeightDiffs(this, atEyeGeo.yaw - 0x7FFF);
+      Camera_GetPitchAdjFromFloorHeightDiffs(camera, atEyeGeo.yaw - 0x7FFF);
   f32 pitchAdjStep =
       ((1.0f / pitchUpdateRateTarget) * 0.5f) +
-      ((1.0f / pitchUpdateRateTarget) * 0.5f) * (1.0f - this->speedRatio);
-  this->slopePitchAdj =
-      Camera_LERPCeilS(slopePitchTarget, this->slopePitchAdj, pitchAdjStep, 15);
+      ((1.0f / pitchUpdateRateTarget) * 0.5f) * (1.0f - camera->speedRatio);
+  camera->normalSlopePitchAdj = Camera_LERPCeilS(
+      slopePitchTarget, camera->normalSlopePitchAdj, pitchAdjStep, 15);
 
-  Camera_CalcAtDefault(this, yOffset);
+  Camera_CalcAtDefault(camera, yOffset);
 
   VecGeo eyeAdjustment;
-  OLib_Vec3fDiffToVecGeo(&eyeAdjustment, &this->at, &this->eyeNext);
+  OLib_Vec3fDiffToVecGeo(&eyeAdjustment, &camera->at, &camera->eyeNext);
 
-  Camera_ClampDist(this, eyeAdjustment.r, distMin, distMax);
-  eyeAdjustment.r = this->dist;
+  Camera_ClampDist(camera, eyeAdjustment.r, distMin, distMax,
+                   camera->normalRUpdateRateTimer);
+  eyeAdjustment.r = camera->dist;
 
-  f32 accel = (this->xzSpeed - this->prevXZSpeed) * 0.333333f;
+  f32 accel = (camera->xzSpeed - camera->normalPrevXZSpeed) * 0.333333f;
   //   if (accel > 1.0f) {
   //     accel = 1.0f;
   //   }
@@ -421,21 +432,22 @@ void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
     accel = -1.0f;
   }
 
-  this->prevXZSpeed = this->xzSpeed;
+  camera->normalPrevXZSpeed = camera->xzSpeed;
 
-  this->yawUpdateRateInv = Camera_LERPCeilF(
-      this->yawUpdateRateTarget - 0.7f * this->yawUpdateRateTarget * accel,
-      this->yawUpdateRateInv, this->speedRatio * 0.5f, 0.1f);
-  this->pitchUpdateRateInv = Camera_LERPCeilF(16.0f, this->pitchUpdateRateInv,
-                                              this->speedRatio * 0.2f, 0.1f);
+  camera->yawUpdateRateInv = Camera_LERPCeilF(
+      camera->normalYawUpdateRateTarget -
+          0.7f * camera->normalYawUpdateRateTarget * accel,
+      camera->yawUpdateRateInv, camera->speedRatio * 0.5f, 0.1f);
+  camera->pitchUpdateRateInv = Camera_LERPCeilF(
+      16.0f, camera->pitchUpdateRateInv, camera->speedRatio * 0.2f, 0.1f);
   // bug? pitchUpdateRateInv is updated twice
-  this->pitchUpdateRateInv = Camera_LERPCeilF(16.0f, this->pitchUpdateRateInv,
-                                              this->speedRatio * 0.2f, 0.1f);
+  camera->pitchUpdateRateInv = Camera_LERPCeilF(
+      16.0f, camera->pitchUpdateRateInv, camera->speedRatio * 0.2f, 0.1f);
 
-  eyeAdjustment.yaw =
-      Camera_CalcDefaultYaw(this, atEyeNextGeo.yaw, angle, maxYawUpdate, accel);
+  eyeAdjustment.yaw = Camera_CalcDefaultYaw(camera, atEyeNextGeo.yaw, angle,
+                                            maxYawUpdate, accel);
   eyeAdjustment.pitch = Camera_CalcDefaultPitch(
-      this, atEyeNextGeo.pitch, pitchTarget, this->slopePitchAdj);
+      camera, atEyeNextGeo.pitch, pitchTarget, camera->normalSlopePitchAdj);
   if (eyeAdjustment.pitch > 0x38A4) {
     eyeAdjustment.pitch = 0x38A4;
   }
@@ -443,12 +455,12 @@ void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
     eyeAdjustment.pitch = -0x3C8C;
   }
 
-  Camera_AddVecGeoToVec3f(&this->eyeNext, &this->at, &eyeAdjustment);
+  Camera_AddVecGeoToVec3f(&camera->eyeNext, &camera->at, &eyeAdjustment);
 
   Vec3f collisionPoint;
   Vec3f collisionNormal;
-  // TODO: check both ways
-  if (Camera_BGCheckInfo(this, this->at, this->eyeNext, &collisionPoint,
+  // TODO: check both ways?
+  if (Camera_BGCheckInfo(camera, camera->at, camera->eyeNext, &collisionPoint,
                          &collisionNormal)) {
     VecGeo geoNorm;
     OLib_Vec3fToVecGeo(&geoNorm, &collisionNormal);
@@ -456,23 +468,142 @@ void Camera::updateNormal1(Vec3f pos, u16 angle, int setting) {
       geoNorm.yaw = eyeAdjustment.yaw;
     }
 
-    f32 collisionDist = OLib_Vec3fDist(&this->at, &collisionPoint);
+    f32 collisionDist = OLib_Vec3fDist(&camera->at, &collisionPoint);
     f32 collisionDistRatio =
         collisionDist > distMin ? 1.0f : collisionDist / distMin;
-    this->yawUpdateRateTarget = collisionDistRatio * yawUpdateRateTarget;
+    camera->normalYawUpdateRateTarget =
+        collisionDistRatio * yawUpdateRateTarget;
 
-    this->eye = collisionPoint + collisionNormal;
+    camera->eye = collisionPoint + collisionNormal;
     if (collisionDist < 30.0f) {
       VecGeo offset;
       offset.yaw = eyeAdjustment.yaw;
       offset.pitch = Math_SinS(geoNorm.pitch + 0x3FFF) * 16380.0f;
       offset.r = (30.0f - collisionDist) * 1.2f;
-      Camera_AddVecGeoToVec3f(&this->eye, &this->eye, &offset);
+      Camera_AddVecGeoToVec3f(&camera->eye, &camera->eye, &offset);
     }
   } else {
-    this->yawUpdateRateTarget = yawUpdateRateTarget;
-    this->eye = collisionPoint + collisionNormal;
+    camera->normalYawUpdateRateTarget = yawUpdateRateTarget;
+    camera->eye = collisionPoint + collisionNormal;
   }
 
-  this->atLERPStepScale = Camera_ClampLERPScale(this, atLERPScaleMax);
+  camera->atLERPStepScale = Camera_ClampLERPScale(camera, atLERPScaleMax);
+}
+
+void Camera_Parallel1(Camera* camera, Vec3f pos, u16 angle, int setting) {
+  CameraZParallelSettings* settings = &cameraZParallelSettings[setting];
+  f32 yNormal = 1.0f - 0.1f - (-0.1f * (68.0f / camera->playerHeight));
+  f32 yOffset =
+      CAM_DATA_SCALED(settings->yOffset) * camera->playerHeight * yNormal;
+  f32 distTarget =
+      CAM_DATA_SCALED(settings->dist) * camera->playerHeight * yNormal;
+  f32 yawUpdateRateTarget = settings->yawUpdateRateTarget;
+  f32 atLerpStepScale = CAM_DATA_SCALED(settings->atLerpStepScale);
+
+  if (camera->mode != 1 || setting != camera->setting) {
+    camera->setting = setting;
+    camera->mode = 1;
+
+    camera->parallelAnimTimer = 4;
+  }
+
+  if (camera->parallelAnimTimer != 0) {
+    camera->parallelYawTarget = angle - 0x7FFF;
+  }
+
+  VecGeo atEyeGeo;
+  OLib_Vec3fDiffToVecGeo(&atEyeGeo, &camera->at, &camera->eye);
+
+  VecGeo atEyeNextGeo;
+  OLib_Vec3fDiffToVecGeo(&atEyeNextGeo, &camera->at, &camera->eyeNext);
+
+  camera->rUpdateRateInv = Camera_LERPCeilF(20.0f, camera->rUpdateRateInv,
+                                            camera->speedRatio * 0.5f, 0.1f);
+  camera->yawUpdateRateInv =
+      Camera_LERPCeilF(yawUpdateRateTarget, camera->yawUpdateRateInv,
+                       camera->speedRatio * 0.5f, 0.1f);
+  camera->pitchUpdateRateInv = Camera_LERPCeilF(
+      2.0f, camera->pitchUpdateRateInv, camera->speedRatio * 0.2f, 0.1f);
+
+  Camera_CalcAtForParallel(camera, yOffset);
+
+  VecGeo eyeAdjustment;
+  if (camera->parallelAnimTimer != 0) {
+    camera->modeChangeDisallowed = true;
+    int animTimer = camera->parallelAnimTimer;
+    int tangle = ((animTimer + 1) * animTimer) >> 1;
+    eyeAdjustment.yaw =
+        atEyeGeo.yaw +
+        (angleDiff(camera->parallelYawTarget, atEyeGeo.yaw) / tangle) *
+            animTimer;
+    eyeAdjustment.pitch = atEyeGeo.pitch;
+    eyeAdjustment.r = atEyeGeo.r;
+    camera->parallelAnimTimer--;
+  } else {
+    camera->dist = Camera_LERPCeilF(distTarget, camera->dist,
+                                    1.0f / camera->rUpdateRateInv, 2.0f);
+    OLib_Vec3fDiffToVecGeo(&eyeAdjustment, &camera->at, &camera->eyeNext);
+    eyeAdjustment.r = camera->dist;
+    eyeAdjustment.yaw =
+        Camera_LERPCeilS(camera->parallelYawTarget, atEyeNextGeo.yaw, 0.8f, 10);
+    eyeAdjustment.pitch = Camera_LERPCeilS(
+        0.0f, atEyeNextGeo.pitch, 1.0f / camera->pitchUpdateRateInv, 4);
+
+    if (eyeAdjustment.pitch > 14500) {
+      eyeAdjustment.pitch = 14500;
+    }
+
+    if (eyeAdjustment.pitch < -5460) {
+      eyeAdjustment.pitch = -5460;
+    }
+  }
+
+  Camera_AddVecGeoToVec3f(&camera->eyeNext, &camera->at, &eyeAdjustment);
+
+  // TODO: if skyboxDisabled, call func_80043F94, which also checks if camera
+  // view does not go through the floor poly that the player is on?
+  Vec3f collisionPoint;
+  Vec3f collisionNormal;
+  Camera_BGCheckInfo(camera, camera->at, camera->eyeNext, &collisionPoint,
+                     &collisionNormal);
+  camera->eye = collisionPoint;
+
+  camera->atLERPStepScale = Camera_ClampLERPScale(camera, atLerpStepScale);
+}
+
+void Camera::update(Vec3f pos, u16 angle, int setting, int mode) {
+  this->frames++;
+
+  Vec3f prevPos = this->playerPos;
+  this->playerPos = pos;
+  this->xzSpeed = OLib_Vec3fDistXZ(&pos, &prevPos);
+  this->speedRatio = OLib_ClampMaxDist(this->xzSpeed / 9.0f, 1.0f);
+
+  if (this->modeChangeDisallowed) {
+    mode = this->mode;
+  }
+  this->modeChangeDisallowed = false;
+
+  switch (mode) {
+    case 0:
+      Camera_Normal1(this, pos, angle, setting);
+      break;
+    case 1:
+      Camera_Parallel1(this, pos, angle, setting);
+      break;
+  }
+}
+
+void Camera::updateNormal(Vec3f pos, u16 angle, int setting) {
+  update(pos, angle, setting, 0);
+}
+
+void Camera::updateParallel(Vec3f pos, u16 angle, int setting) {
+  update(pos, angle, setting, 1);
+}
+
+u16 Camera::yaw() {
+  VecGeo result;
+  OLib_Vec3fDiffToVecGeo(&result, &this->eye, &this->at);
+  return result.yaw;
 }

@@ -144,15 +144,15 @@ void findBombDrops() {
 u16 targetUpAngle(Collision* col, Vec3f pos, u16 angle) {
   int setting = 4;
   Camera camera(col);
-  camera.initParallel1(pos, angle, setting);
+  camera.initParallel(pos, angle, setting);
   return camera.yaw();
 }
 
 u16 essUpAngle(Collision* col, Vec3f pos, u16 angle) {
   int setting = 4;
   Camera camera(col);
-  camera.initParallel1(pos, angle, setting);
-  camera.updateNormal1(pos, angle, setting);
+  camera.initParallel(pos, angle, setting);
+  camera.updateNormal(pos, angle, setting);
   return camera.yaw();
 }
 
