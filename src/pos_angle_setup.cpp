@@ -57,6 +57,10 @@ int actionCost(Action action) {
       return 12;
     case FORWARD_STAB_SHIELD:
       return 9;
+    case JUMPSLASH:
+      return 32;
+    case JUMPSLASH_SHIELD:
+      return 20;
     case CROUCH_STAB:
       return 8;
     case TURN_ESS_UP:
@@ -131,6 +135,13 @@ SwordSlash forwardStab = {
     .endAnimFrames = 9,
 };
 
+SwordSlash jumpslashLanding = {
+    .startAnimData = gPlayerAnim_link_fighter_Lpower_jump_kiru_end_Data,
+    .startAnimFrames = 9,
+    .endAnimData = gPlayerAnim_link_fighter_power_jump_kiru_end_Data,
+    .endAnimFrames = 20,
+};
+
 bool PosAngleSetup::essLeft(int n) {
   this->angle += n * 0x708;
   return true;
@@ -148,7 +159,7 @@ bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
   //     "ySpeed=%.9g\n", this->pos.x, this->pos.y, this->pos.z, this->angle,
   //     xzSpeed, ySpeed);
 
-  Vec3f intendedPos = translate(pos, movementAngle, xzSpeed, ySpeed - 1.0f);
+  Vec3f intendedPos = translate(pos, movementAngle, xzSpeed, ySpeed);
 
   CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
@@ -185,7 +196,7 @@ bool PosAngleSetup::settle() {
   Vec3f prevPos;
   do {
     prevPos = this->pos;
-    if (!moveOnGround(prevPos, this->angle, 0, -4.0f)) {
+    if (!moveOnGround(prevPos, this->angle, 0, -5.0f)) {
       return false;
     }
   } while (pos != prevPos);
@@ -207,7 +218,7 @@ bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
       xzSpeed = 3.0f;
     }
 
-    if (!moveOnGround(this->pos, movementAngle, xzSpeed, -4.0f)) {
+    if (!moveOnGround(this->pos, movementAngle, xzSpeed, -5.0f)) {
       return false;
     }
   }
@@ -233,7 +244,7 @@ bool PosAngleSetup::longroll() {
     }
 
     // TODO: don't bonk
-    if (!moveOnGround(this->pos, this->angle, xzSpeed, -4.0f)) {
+    if (!moveOnGround(this->pos, this->angle, xzSpeed, -5.0f)) {
       return false;
     }
   }
@@ -247,12 +258,12 @@ bool PosAngleSetup::longroll() {
 
 bool PosAngleSetup::shieldScoot() {
   for (int i = 0; i < 2; i++) {
-    if (!moveOnGround(this->pos, this->angle, 2.0f, -4.0f)) {
+    if (!moveOnGround(this->pos, this->angle, 2.0f, -5.0f)) {
       return false;
     }
   }
 
-  if (!moveOnGround(this->pos, this->angle, 0.0f, -4.0f)) {
+  if (!moveOnGround(this->pos, this->angle, 0.0f, -5.0f)) {
     return false;
   }
 
@@ -262,11 +273,10 @@ bool PosAngleSetup::shieldScoot() {
 bool PosAngleSetup::jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed) {
   bool onGround;
   for (int i = 0; i < 20; i++) {
+    ySpeed -= 1.0f;
     if (!move(this->pos, movementAngle, xzSpeed, ySpeed, &onGround)) {
       return false;
     }
-
-    ySpeed -= 1.0f;
 
     if (onGround) {
       break;
@@ -274,6 +284,7 @@ bool PosAngleSetup::jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed) {
   }
 
   xzSpeed -= 1.0f;
+  ySpeed -= 1.0f;
   if (!moveOnGround(this->pos, movementAngle, xzSpeed, ySpeed)) {
     return false;
   }
@@ -305,11 +316,18 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
   f32 speedDecayRate = 5.0f;
   u16* animData = slash.startAnimData;
   int endFrame = slash.startAnimFrames - 1;
-  f32 curFrame = -1;
+  f32 curFrame = 0;
   f32 updateRate = 1.0f;
 
   Vec3f swordBase;
   Vec3f swordTip;
+
+  // Apply first frame separately
+  Vec3f root = rotate(rootTranslation(animData, curFrame), this->angle);
+  Vec3f diff = root - prevRoot;
+  diff.y = 0.0f;
+  this->pos = this->pos + diff * ageScale * 0.01f;
+  prevRoot = root;
 
   while (true) {
     // printf(
@@ -321,7 +339,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
     //     this->pos.z, floatToInt(this->pos.z), swordBase.x, swordBase.y,
     //     swordBase.z, swordTip.x, swordTip.y, swordTip.z, speed);
 
-    if (!moveOnGround(prevPos, this->angle, speed, -4.0f)) {
+    if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
       return false;
     }
     prevPos = this->pos;
@@ -391,7 +409,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
   //        floatToInt(this->pos.y), this->pos.z, floatToInt(this->pos.z),
   //        speed);
 
-  if (!moveOnGround(prevPos, this->angle, speed, -4.0f)) {
+  if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
     return false;
   }
 
@@ -402,8 +420,32 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
   return true;
 }
 
+bool PosAngleSetup::jumpslash(bool shield) {
+  f32 xzSpeed = 5.0f;
+  f32 ySpeed = 5.0f;
+  f32 gravity = 1.0f;
+
+  bool onGround;
+  for (int i = 0; i < 20; i++) {
+    // TODO: model sword recoil while in the air
+
+    ySpeed -= gravity;
+    if (!move(this->pos, this->angle, xzSpeed, ySpeed, &onGround)) {
+      return false;
+    }
+
+    xzSpeed -= 0.1f;
+    gravity = 1.2f;
+
+    if (onGround) {
+      break;
+    }
+  }
+
+  return swordSlash(jumpslashLanding, false, shield);
+}
+
 bool PosAngleSetup::crouchStab() {
-  // TODO
   PlayerAge age = this->col->age;
   f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
 
@@ -430,7 +472,7 @@ bool PosAngleSetup::crouchStab() {
     //     swordBase.x, swordBase.y, swordBase.z, swordTip.x, swordTip.y,
     //     swordTip.z, speed);
 
-    if (!moveOnGround(this->pos, this->angle, speed, -4.0f)) {
+    if (!moveOnGround(this->pos, this->angle, speed, -5.0f)) {
       return false;
     }
 
@@ -472,7 +514,7 @@ bool PosAngleSetup::crouchStab() {
   //        floatToInt(this->pos.x), this->pos.y, floatToInt(this->pos.y),
   //        this->pos.z, floatToInt(this->pos.z), speed);
 
-  if (!moveOnGround(this->pos, this->angle, speed, -4.0f)) {
+  if (!moveOnGround(this->pos, this->angle, speed, -5.0f)) {
     return false;
   }
 
@@ -543,6 +585,10 @@ bool PosAngleSetup::performAction(Action action) {
       return swordSlash(forwardStab, true, false);
     case FORWARD_STAB_SHIELD:
       return swordSlash(forwardStab, true, true);
+    case JUMPSLASH:
+      return jumpslash(false);
+    case JUMPSLASH_SHIELD:
+      return jumpslash(true);
     case CROUCH_STAB:
       return crouchStab();
     case TURN_ESS_LEFT:
