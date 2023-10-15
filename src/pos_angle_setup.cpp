@@ -136,7 +136,7 @@ SwordSlash forwardStab = {
 };
 
 SwordSlash jumpslashLanding = {
-    .startAnimData = gPlayerAnim_link_fighter_Lpower_jump_kiru_end_Data,
+    .startAnimData = gPlayerAnim_link_fighter_Lpower_jump_kiru_hit_Data,
     .startAnimFrames = 9,
     .endAnimData = gPlayerAnim_link_fighter_power_jump_kiru_end_Data,
     .endAnimFrames = 20,
