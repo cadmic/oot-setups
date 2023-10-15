@@ -402,7 +402,6 @@ void findPosAngleSetups(Collision* col) {
 
   int tested = 0;
   int found = 0;
-  // TODO: generalize to arbitrary number of actions
 
   for (int k = 1; k <= 4; k++) {
     std::vector<int> indices(k, 0);
@@ -426,7 +425,6 @@ void findPosAngleSetups(Collision* col) {
         }
         tested++;
 
-        // TODO: ban some actions if we'll target the wall
         for (const Vec3f& initialPos : initialPositions) {
           if (testPosAngleSetup(col, actions, initialPos, initialAngle,
                                 false)) {
