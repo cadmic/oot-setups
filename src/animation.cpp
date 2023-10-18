@@ -135,3 +135,18 @@ void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
   applyAnimation(animData, frame, age, pos, angle,
                  rootTranslation(animData, frame), outLimbMatrices);
 }
+
+Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                        u16 angle) {
+  MtxF limbMatrices[PLAYER_LIMB_MAX];
+  applyAnimation(animData, frame, age, pos, angle, limbMatrices);
+
+  Vec3f leftHandPos, rightHandPos;
+  Vec3f sZeroVec = {0.0f, 0.0f, 0.0f};
+  SkinMatrix_Vec3fMtxFMultXYZ(&limbMatrices[PLAYER_LIMB_L_HAND], &sZeroVec,
+                              &leftHandPos);
+  SkinMatrix_Vec3fMtxFMultXYZ(&limbMatrices[PLAYER_LIMB_R_HAND], &sZeroVec,
+                              &rightHandPos);
+
+  return (leftHandPos + rightHandPos) * 0.5f;
+}

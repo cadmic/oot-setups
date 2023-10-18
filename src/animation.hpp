@@ -40,3 +40,7 @@ void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
 // Apply animation frame, outputting matrices for each limb
 void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
                     u16 angle, MtxF* outLimbMatrices);
+
+// Compute held actor position, halfway between Link's hands.
+Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                        u16 angle);

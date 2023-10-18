@@ -8,21 +8,11 @@
 #include "sys_math.hpp"
 #include "sys_math3d.hpp"
 
-// TODO: move somewhere common (what should the y coordinate be though?)
 Vec3f dropBomb(Vec3f pos, u16 angle, bool instant, bool swordInHand) {
-  MtxF limbMatrices[PLAYER_LIMB_MAX];
-  applyAnimation(swordInHand ? gPlayerAnim_link_normal_normal2bom_Data
-                             : gPlayerAnim_link_normal_free2bom_Data,
-                 instant ? 7 : 19, PLAYER_AGE_ADULT, pos, angle, limbMatrices);
-
-  Vec3f leftHandPos, rightHandPos;
-  Vec3f sZeroVec = {0.0f, 0.0f, 0.0f};
-  SkinMatrix_Vec3fMtxFMultXYZ(&limbMatrices[PLAYER_LIMB_L_HAND], &sZeroVec,
-                              &leftHandPos);
-  SkinMatrix_Vec3fMtxFMultXYZ(&limbMatrices[PLAYER_LIMB_R_HAND], &sZeroVec,
-                              &rightHandPos);
-
-  Vec3f pullPos = (leftHandPos + rightHandPos) * 0.5f;
+  Vec3f pullPos =
+      heldActorPosition(swordInHand ? gPlayerAnim_link_normal_normal2bom_Data
+                                    : gPlayerAnim_link_normal_free2bom_Data,
+                        instant ? 7 : 19, PLAYER_AGE_ADULT, pos, angle);
   pullPos.y = pos.y;
   return pullPos;
 }
