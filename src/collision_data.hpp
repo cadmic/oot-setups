@@ -6,7 +6,7 @@
 
 // Forest Temple
 extern CollisionHeader Bmori1_sceneCollisionHeader_014054;
-// Fire Temple
+// Volvagia
 extern CollisionHeader FIRE_bs_sceneCollisionHeader_002BCC;
 // Shadow Temple
 extern CollisionHeader HAKAdan_sceneCollisionHeader_016394;
