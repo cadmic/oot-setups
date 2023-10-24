@@ -1,5 +1,5 @@
 #include "actor.hpp"
-#include "collision_shadow.hpp"
+#include "collision_data.hpp"
 #include "sys_math.hpp"
 
 extern CollisionHeader object_haka_objects_Col_00A938;

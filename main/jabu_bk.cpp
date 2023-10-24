@@ -3,7 +3,7 @@
 #include "actor.hpp"
 #include "camera.hpp"
 #include "collision.hpp"
-#include "collision_jabu.hpp"
+#include "collision_data.hpp"
 #include "global.hpp"
 #include "pos_angle_setup.hpp"
 #include "sys_math.hpp"

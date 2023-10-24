@@ -1,6 +1,6 @@
 #include "actor.hpp"
 #include "camera_angles.hpp"
-#include "collision_water.hpp"
+#include "collision_data.hpp"
 #include "pos_angle_setup.hpp"
 #include "sys_math.hpp"
 

@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "actor.hpp"
-#include "collision_deku.hpp"
+#include "collision_data.hpp"
 #include "global.hpp"
 #include "pos_angle_setup.hpp"
 #include "sys_math.hpp"
