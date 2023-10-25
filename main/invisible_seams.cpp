@@ -38,7 +38,7 @@ std::map<std::string, CollisionHeader*> scenes = {
     {"Great Fairy Fountain (Upgrades)",
      &daiyousei_izumi_sceneCollisionHeader_0043A4},
     {"Hyrule Castle Guards (Day)", &hairal_niwa_sceneCollisionHeader_0030B0},
-    {"Unused", &hairal_niwa2_sceneCollisionHeader_002CD8},
+    // {"Unused", &hairal_niwa2_sceneCollisionHeader_002CD8},
     {"Hyrule Castle Guards (Night)",
      &hairal_niwa_n_sceneCollisionHeader_0010C4},
     {"Dampe's Grave and Windmill", &hakasitarelay_sceneCollisionHeader_00C04C},
@@ -169,7 +169,7 @@ Vec3f highestPoint(Vec3f v, Vec3f normal, f32 dist) {
 }
 
 void findInvisibleSeams() {
-  printf("height,scene,poly index,x,y,z,x (hex),y (hex),z (hex)\n");
+  printf("height,scene,poly index,vx,vy,vz,x,y,z,x (hex),y (hex),z (hex)\n");
   for (const auto& entry : scenes) {
     const std::string& name = entry.first;
     CollisionHeader* colHeader = entry.second;
@@ -191,9 +191,10 @@ void findInvisibleSeams() {
       for (int j = 0; j < 3; j++) {
         if (v[j].y == ymax) {
           Vec3f seam = highestPoint(v[j], normal, dist);
-          printf("%.9g,%s,0x%x,%.9g,%.9g,%.9g,%08x,%08x,%08x\n", seam.y - ymax,
-                 name.c_str(), i, seam.x, seam.y, seam.z, floatToInt(seam.x),
-                 floatToInt(seam.y), floatToInt(seam.z));
+          printf("%.9g,%s,0x%x,%.0f,%.0f,%.0f,%.9g,%.9g,%.9g,%08x,%08x,%08x\n",
+                 seam.y - ymax, name.c_str(), i, v[j].x, v[j].y, v[j].z, seam.x,
+                 seam.y, seam.z, floatToInt(seam.x), floatToInt(seam.y),
+                 floatToInt(seam.z));
           fflush(stdout);
         }
       }
