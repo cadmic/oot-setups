@@ -1,7 +1,6 @@
 #include "collision.hpp"
 
 #include <algorithm>
-#include <iostream>
 
 #include "global.hpp"
 #include "skin_matrix.hpp"
@@ -9,20 +8,6 @@
 
 #define COLPOLY_NORMAL_FRAC (1.0f / SHT_MAX)
 #define COLPOLY_SNORMAL(x) ()
-
-void printCollisionObj(CollisionHeader* collision) {
-  for (int i = 0; i < collision->numVertices; i++) {
-    Vec3s* v = &collision->vertices[i];
-    std::cout << "v " << v->x << " " << v->y << " " << v->z << std::endl;
-  }
-
-  for (int i = 0; i < collision->numPolys; i++) {
-    CollisionPoly* poly = &collision->polys[i];
-    std::cout << "f " << (poly->v1 & 0x1FFF) + 1 << " "
-              << (poly->v2 & 0x1FFF) + 1 << " " << (poly->v3 & 0x1FFF) + 1
-              << std::endl;
-  }
-}
 
 void CollisionPoly_GetVertices(CollisionPoly* poly, Vec3s* vtxList,
                                Vec3f* dest) {
@@ -715,6 +700,56 @@ Collision::Collision(CollisionHeader* header, PlayerAge age, Vec3f min,
         addPoly(polyId);
         break;
       }
+    }
+  }
+}
+
+void printPoly(CollisionPoly* poly, Vec3s* vtxList) {
+  Vec3f v[3];
+  CollisionPoly_GetVertices(poly, vtxList, v);
+  Vec3f normal = CollisionPoly_GetNormalF(poly);
+  s16 dist = poly->dist;
+  f32 actualDist = -DOTXYZ(normal, v[0]);
+  printf(
+      "    v1=(%.0f, %.0f, %.0f) v2=(%.0f, %.0f, %.0f) v3=(%.0f, %.0f, %.0f) "
+      "nx=%.4f ny=%.4f nz=%.4f dist=%d actualDist=%.9g\n",
+      v[0].x, v[0].y, v[0].z, v[1].x, v[1].y, v[1].z, v[2].x, v[2].y, v[2].z,
+      normal.x, normal.y, normal.z, dist, actualDist);
+}
+
+void Collision::printPolys() {
+  printf("scene collision:\n");
+  printf("  walls:\n");
+  for (CollisionPoly* poly : this->walls) {
+    printPoly(poly, this->vtxList);
+  }
+
+  printf("  floors:\n");
+  for (CollisionPoly* poly : this->floors) {
+    printPoly(poly, this->vtxList);
+  }
+
+  printf("  ceilings:\n");
+  for (CollisionPoly* poly : this->ceilings) {
+    printPoly(poly, this->vtxList);
+  }
+
+  for (int i = 0; i < this->dynas.size(); i++) {
+    Dyna* dyna = &this->dynas[i];
+    printf("dyna %d:\n", i);
+    printf("  walls:\n");
+    for (CollisionPoly& poly : dyna->walls) {
+      printPoly(&poly, dyna->vertices.data());
+    }
+
+    printf("  floors:\n");
+    for (CollisionPoly& poly : dyna->floors) {
+      printPoly(&poly, dyna->vertices.data());
+    }
+
+    printf("  ceilings:\n");
+    for (CollisionPoly& poly : dyna->ceilings) {
+      printPoly(&poly, dyna->vertices.data());
     }
   }
 }

@@ -61,9 +61,6 @@ void CollisionPoly_GetVertices(CollisionPoly* poly, Vec3s* vtxList,
                                Vec3f* dest);
 Vec3f CollisionPoly_GetNormalF(CollisionPoly* poly);
 
-// Prints collision data in Wavefront OBJ format.
-void printCollisionObj(CollisionHeader* collision);
-
 struct Dyna {
   MtxF mtx;
   f32 minY;
@@ -93,6 +90,9 @@ struct Collision {
   Collision(CollisionHeader* header, PlayerAge age);
   // Adds all triangles with a vertex within the given bounds
   Collision(CollisionHeader* header, PlayerAge age, Vec3f min, Vec3f max);
+
+  // Prints collision polygons
+  void printPolys();
 
   // Add a poly
   void addPoly(int polyId);
