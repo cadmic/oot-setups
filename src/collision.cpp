@@ -160,52 +160,48 @@ bool BgCheck_CheckLineAgainstDynaList(Collision* col, Dyna* dyna,
   return result;
 }
 
-bool BgCheck_CheckLineAgainstDyna(Collision* col, Vec3f posA, Vec3f* posB,
-                                  bool checkFloors, bool checkWalls,
-                                  f32* minDistSq, CollisionPoly** outPoly) {
-  bool result = false;
-  for (Dyna& dyna : col->dynas) {
-    if (posA.y < dyna.minY || posA.y > dyna.maxY || posB->y < dyna.minY ||
-        posB->y > dyna.maxY) {
-      continue;
-    }
-
-    if (checkFloors &&
-        BgCheck_CheckLineAgainstDynaList(col, &dyna, &dyna.floors, posA, posB,
-                                         minDistSq, outPoly)) {
-      result = true;
-    }
-
-    if (checkWalls &&
-        BgCheck_CheckLineAgainstDynaList(col, &dyna, &dyna.walls, posA, posB,
-                                         minDistSq, outPoly)) {
-      result = true;
-    }
-  }
-  return result;
-}
-
 bool BgCheck_CheckLineImpl(Collision* col, Vec3f posPrev, Vec3f posNext,
                            bool checkWalls, bool checkFloors, bool checkDyna,
-                           Vec3f* posIntersect, CollisionPoly** outPoly) {
+                           Vec3f* posIntersect, CollisionPoly** outPoly,
+                           int* outDynaId) {
   bool result = false;
   Vec3f posA = posPrev;
   Vec3f posB = posNext;
   f32 minDistSq = 1.0e38f;
   if (checkFloors && BgCheck_CheckLineAgainstList(col, &col->floors, posA,
                                                   &posB, &minDistSq, outPoly)) {
+    *outDynaId = -1;
     result = true;
   }
 
   if (BgCheck_CheckLineAgainstList(col, &col->walls, posA, &posB, &minDistSq,
                                    outPoly)) {
+    *outDynaId = -1;
     result = true;
   }
 
-  if (checkDyna &&
-      BgCheck_CheckLineAgainstDyna(col, posA, &posB, checkFloors, checkWalls,
-                                   &minDistSq, outPoly)) {
-    result = true;
+  if (checkDyna) {
+    for (int i = 0; i < col->dynas.size(); i++) {
+      Dyna* dyna = &col->dynas[i];
+      if (posA.y < dyna->minY || posA.y > dyna->maxY || posB.y < dyna->minY ||
+          posB.y > dyna->maxY) {
+        continue;
+      }
+
+      if (checkFloors &&
+          BgCheck_CheckLineAgainstDynaList(col, dyna, &dyna->floors, posA,
+                                           &posB, &minDistSq, outPoly)) {
+        *outDynaId = i;
+        result = true;
+      }
+
+      if (checkWalls &&
+          BgCheck_CheckLineAgainstDynaList(col, dyna, &dyna->walls, posA, &posB,
+                                           &minDistSq, outPoly)) {
+        *outDynaId = i;
+        result = true;
+      }
+    }
   }
 
   *posIntersect = posB;
@@ -453,6 +449,9 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
   f32 radius = col->age == PLAYER_AGE_CHILD ? 14.0f : 18.0f;
   f32 checkHeight = 26.0f;
 
+  CollisionPoly* poly;
+  int dynaId;
+
   *posResult = posNext;
   bool result = false;
 
@@ -466,9 +465,8 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
     if (checkHeight + dy < 5.0f) {
       //! @bug checkHeight is not applied to posPrev/posNext
       Vec3f posIntersect;
-      CollisionPoly* poly;
       if (BgCheck_CheckLineImpl(col, posPrev, posNext, true, true, true,
-                                &posIntersect, &poly)) {
+                                &posIntersect, &poly, &dynaId)) {
         result = true;
         *wallPoly = poly;
         Vec3f normal = CollisionPoly_GetNormalF(poly);
@@ -480,30 +478,30 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
         }
       }
     } else {
-      // if the radius is less than the distance travelled on the xz plane, also
-      // test for floor collisions
+      // if the radius is less than the distance travelled on the xz plane,
+      // also test for floor collisions
       bool checkFloors = (SQ(radius) < (SQ(dx) + SQ(dz)));
 
       // perform a straight line test to see if a line at posNext.y +
-      // checkHeight from posPrev.xz to posNext.xz passes through any wall and
-      // possibly floor polys
+      // checkHeight from posPrev.xz to posNext.xz passes through any wall
+      // and possibly floor polys
       Vec3f checkLineNext = posNext;
       checkLineNext.y += checkHeight;
       Vec3f checkLinePrev = posPrev;
       checkLinePrev.y = checkLineNext.y;
 
       Vec3f posIntersect;
-      CollisionPoly* poly;
       if (BgCheck_CheckLineImpl(col, checkLinePrev, checkLineNext, true,
-                                checkFloors, true, &posIntersect, &poly)) {
+                                checkFloors, true, &posIntersect, &poly,
+                                &dynaId)) {
         *wallPoly = poly;
         Vec3f normal = CollisionPoly_GetNormalF(poly);
         f32 nXZDist = sqrtf(SQ(normal.x) + SQ(normal.z));
 
         // if poly is not a "flat" floor or "flat" ceiling
         if (!IS_ZERO(nXZDist)) {
-          // normalize nx, nz and multiply each by the radius to go back to the
-          // other side of the wall
+          // normalize nx, nz and multiply each by the radius to go back to
+          // the other side of the wall
           Vec3f offset = normal * (radius * (1.0f / nXZDist)) + posIntersect;
           posResult->x = offset.x;
           posResult->z = offset.z;
@@ -513,7 +511,6 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
     }
   }
 
-  CollisionPoly* poly;
   Vec3f sphCenter = *posResult;
   sphCenter.y += checkHeight;
 
@@ -526,25 +523,24 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
     sphCenter.y += checkHeight;
   }
 
-  bool staticResult = false;
   if (BgCheck_SphVsStaticWall(col, sphCenter, radius, &posResult->x,
                               &posResult->z, &poly)) {
-    staticResult = true;
+    dynaId = -1;
     result = true;
     *wallPoly = poly;
   }
 
-  if (dynaResult || !staticResult) {
+  if (dynaResult || dynaId != -1) {
     Vec3f posIntersect;
     if (BgCheck_CheckLineImpl(col, posPrev, *posResult, true, false, false,
-                              &posIntersect, &poly)) {
+                              &posIntersect, &poly, &dynaId)) {
       Vec3f normal = CollisionPoly_GetNormalF(poly);
       f32 nXZDist = sqrtf(SQ(normal.x) + SQ(normal.z));
 
       // if poly is not a "flat" floor or "flat" ceiling
       if (!IS_ZERO(nXZDist)) {
-        // normalize nx, nz and multiply each by the radius to go back to the
-        // other side of the wall
+        // normalize nx, nz and multiply each by the radius to go back to
+        // the other side of the wall
         Vec3f offset = normal * (radius * (1.0f / nXZDist)) + posIntersect;
         posResult->x = offset.x;
         posResult->z = offset.z;
@@ -836,15 +832,18 @@ Vec3f Collision::findFloor(Vec3f pos) {
 Vec3f Collision::entityLineTest(Vec3f pos, Vec3f target, bool checkWalls,
                                 bool checkFloors, CollisionPoly** outPoly) {
   *outPoly = NULL;
+  int dynaId;
   BgCheck_CheckLineImpl(this, pos, target, checkWalls, checkFloors, true,
-                        &target, outPoly);
+                        &target, outPoly, &dynaId);
   return target;
 }
 
 Vec3f Collision::cameraLineTest(Vec3f pos, Vec3f target,
                                 CollisionPoly** outPoly) {
   *outPoly = NULL;
-  BgCheck_CheckLineImpl(this, pos, target, true, true, true, &target, outPoly);
+  int dynaId;
+  BgCheck_CheckLineImpl(this, pos, target, true, true, true, &target, outPoly,
+                        &dynaId);
   return target;
 }
 
