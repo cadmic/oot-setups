@@ -300,9 +300,6 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
                                bool shield) {
   PlayerAge age = this->col->age;
   f32 ageScale = age == PLAYER_AGE_CHILD ? 0.64f : 1.0f;
-  f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
-
-  MtxF limbMatrices[PLAYER_LIMB_MAX];
 
   Vec3f baseRoot = {-57, 3377, 0};
   Vec3f prevRoot = rotate(baseRoot, this->angle);
@@ -383,24 +380,14 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
     }
 
     Vec3f root = rotate(rootTranslation(animData, curFrame), this->angle);
-
     Vec3f diff = root - prevRoot;
     diff.y = 0.0f;
     this->pos = this->pos + diff * ageScale * 0.01f;
     prevRoot = root;
 
     if (swingingSword) {
-      Vec3f swordRoot = {baseRoot.x, root.y, baseRoot.z};
-      applyAnimation(animData, curFrame, age, this->pos, this->angle, swordRoot,
-                     limbMatrices);
-
-      Vec3f tipOffset = {swordLength, 400.0f, 0.0f};
-      Matrix_MultVec3fExt(&tipOffset, &swordTip,
-                          &limbMatrices[PLAYER_LIMB_L_HAND]);
-
-      Vec3f baseOffset = {0.0f, 400.0f, 0.0f};
-      Matrix_MultVec3fExt(&baseOffset, &swordBase,
-                          &limbMatrices[PLAYER_LIMB_L_HAND]);
+      getSwordPosition(animData, curFrame, age, this->pos, this->angle,
+                       &swordBase, &swordTip);
     }
   }
 
@@ -447,9 +434,6 @@ bool PosAngleSetup::jumpslash(bool shield) {
 
 bool PosAngleSetup::crouchStab() {
   PlayerAge age = this->col->age;
-  f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
-
-  MtxF limbMatrices[PLAYER_LIMB_MAX];
 
   bool hit = false;
   f32 speed = 0.0f;
@@ -497,16 +481,8 @@ bool PosAngleSetup::crouchStab() {
       curFrame = std::min(curFrame + updateRate, (f32)endFrame);
     }
 
-    applyAnimation(animData, curFrame, age, this->pos, this->angle,
-                   limbMatrices);
-
-    Vec3f tipOffset = {swordLength, 400.0f, 0.0f};
-    Matrix_MultVec3fExt(&tipOffset, &swordTip,
-                        &limbMatrices[PLAYER_LIMB_L_HAND]);
-
-    Vec3f baseOffset = {0.0f, 400.0f, 0.0f};
-    Matrix_MultVec3fExt(&baseOffset, &swordBase,
-                        &limbMatrices[PLAYER_LIMB_L_HAND]);
+    getSwordPosition(animData, curFrame, age, this->pos, this->angle,
+                     &swordBase, &swordTip);
   }
 
   // printf("x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) speed=%.0f\n",

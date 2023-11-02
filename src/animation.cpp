@@ -136,8 +136,8 @@ void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
                  rootTranslation(animData, frame), outLimbMatrices);
 }
 
-Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
-                        u16 angle) {
+Vec3f getHeldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                           u16 angle) {
   MtxF limbMatrices[PLAYER_LIMB_MAX];
   applyAnimation(animData, frame, age, pos, angle, limbMatrices);
 
@@ -149,4 +149,22 @@ Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
                               &rightHandPos);
 
   return (leftHandPos + rightHandPos) * 0.5f;
+}
+
+void getSwordPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                      u16 angle, Vec3f* outBase, Vec3f* outTip) {
+  f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
+
+  Vec3f root = rootTranslation(animData, frame);
+  Vec3f baseRoot = {-57, 3377, 0};
+  Vec3f swordRoot = {baseRoot.x, root.y, baseRoot.z};
+
+  MtxF limbMatrices[PLAYER_LIMB_MAX];
+  applyAnimation(animData, frame, age, pos, angle, swordRoot, limbMatrices);
+
+  Vec3f baseOffset = {0.0f, 400.0f, 0.0f};
+  Matrix_MultVec3fExt(&baseOffset, outBase, &limbMatrices[PLAYER_LIMB_L_HAND]);
+
+  Vec3f tipOffset = {swordLength, 400.0f, 0.0f};
+  Matrix_MultVec3fExt(&tipOffset, outTip, &limbMatrices[PLAYER_LIMB_L_HAND]);
 }

@@ -41,6 +41,10 @@ void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
 void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
                     u16 angle, MtxF* outLimbMatrices);
 
-// Compute held actor position, halfway between Link's hands.
-Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
-                        u16 angle);
+// Compute held actor position, halfway between Link's hands
+Vec3f getHeldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                           u16 angle);
+
+// Compute sword base and tip positions
+void getSwordPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                      u16 angle, Vec3f* outBase, Vec3f* outTip);
