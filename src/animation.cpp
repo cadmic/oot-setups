@@ -1,5 +1,7 @@
 #include "animation.hpp"
 
+#include "actor.hpp"
+#include "sys_math3d.hpp"
 #include "sys_matrix.hpp"
 
 struct Limb {
@@ -136,8 +138,33 @@ void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
                  rootTranslation(animData, frame), outLimbMatrices);
 }
 
-Vec3f getHeldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
-                           u16 angle) {
+bool nextAnimationFrame(f32* curFrame, int endFrame, f32 updateRate) {
+  if (*curFrame == endFrame) {
+    return false;
+  }
+
+  *curFrame += updateRate;
+  if (*curFrame >= endFrame) {
+    *curFrame = endFrame;
+  }
+
+  return true;
+}
+
+Vec3f baseRootTranslation(u16 angle) { return rotate({-57, 3377, 0}, angle); }
+
+void updateRootTranslation(u16* animData, int frame, PlayerAge age, Vec3f* pos,
+                           u16 angle, Vec3f* prevRootTranslation) {
+  f32 ageScale = age == PLAYER_AGE_CHILD ? (11.0f / 17.0f) : 1.0f;
+  Vec3f root = rotate(rootTranslation(animData, frame), angle);
+  Vec3f diff = root - *prevRootTranslation;
+  diff.y = 0.0f;
+  *pos = *pos + diff * ageScale * 0.01f;
+  *prevRootTranslation = root;
+}
+
+Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                        u16 angle) {
   MtxF limbMatrices[PLAYER_LIMB_MAX];
   applyAnimation(animData, frame, age, pos, angle, limbMatrices);
 
@@ -156,8 +183,7 @@ void getSwordPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
   f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
 
   Vec3f root = rootTranslation(animData, frame);
-  Vec3f baseRoot = {-57, 3377, 0};
-  Vec3f swordRoot = {baseRoot.x, root.y, baseRoot.z};
+  Vec3f swordRoot = Vec3f(-57, root.y, 0);
 
   MtxF limbMatrices[PLAYER_LIMB_MAX];
   applyAnimation(animData, frame, age, pos, angle, swordRoot, limbMatrices);
@@ -167,4 +193,23 @@ void getSwordPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
 
   Vec3f tipOffset = {swordLength, 400.0f, 0.0f};
   Matrix_MultVec3fExt(&tipOffset, outTip, &limbMatrices[PLAYER_LIMB_L_HAND]);
+}
+
+bool swordRecoil(Collision* col, u16* animData, int frame, PlayerAge age,
+                 Vec3f pos, u16 angle) {
+  Vec3f swordBase;
+  Vec3f swordTip;
+
+  getSwordPosition(animData, frame, age, pos, angle, &swordBase, &swordTip);
+
+  f32 dist = Math_Vec3f_DistXYZ(&swordTip, &swordBase);
+  Vec3f checkBase = swordTip + (swordBase - swordTip) * ((dist + 10.0f) / dist);
+
+  CollisionPoly* outPoly;
+  col->entityLineTest(checkBase, swordTip, true, false, &outPoly);
+  if (outPoly) {
+    return true;
+  }
+
+  return false;
 }

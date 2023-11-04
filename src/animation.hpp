@@ -1,5 +1,6 @@
 #pragma once
 
+#include "collision.hpp"
 #include "global.hpp"
 #include "skin_matrix.hpp"
 
@@ -29,9 +30,6 @@ enum PlayerLimb {
   /* 0x16 */ PLAYER_LIMB_MAX
 };
 
-// Extract root XYZ translation for an animation frame
-Vec3s rootTranslation(u16* animData, int frame);
-
 // Apply animation frame overriding root translation, outputting matrices for
 // each limb
 void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
@@ -41,10 +39,24 @@ void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
 void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
                     u16 angle, MtxF* outLimbMatrices);
 
+// Advance to the next frame in the animation
+bool nextAnimationFrame(f32* curFrame, int endFrame, f32 updateRate);
+
+// Default root translation for Link's skeleton
+Vec3f baseRootTranslation(u16 angle);
+
+// Update Link's position based on the animation
+void updateRootTranslation(u16* animData, int frame, PlayerAge age, Vec3f* pos,
+                           u16 angle, Vec3f* prevRootTranslation);
+
 // Compute held actor position, halfway between Link's hands
-Vec3f getHeldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
-                           u16 angle);
+Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+                        u16 angle);
 
 // Compute sword base and tip positions
 void getSwordPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
                       u16 angle, Vec3f* outBase, Vec3f* outTip);
+
+// Tests if sword collides with a wall
+bool swordRecoil(Collision* col, u16* animData, int frame, PlayerAge age,
+                 Vec3f pos, u16 angle);

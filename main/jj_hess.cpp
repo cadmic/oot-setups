@@ -10,9 +10,9 @@
 
 Vec3f dropBomb(Vec3f pos, u16 angle, bool instant, bool swordInHand) {
   Vec3f pullPos =
-      getHeldActorPosition(swordInHand ? gPlayerAnim_link_normal_normal2bom_Data
-                                       : gPlayerAnim_link_normal_free2bom_Data,
-                           instant ? 7 : 19, PLAYER_AGE_ADULT, pos, angle);
+      heldActorPosition(swordInHand ? gPlayerAnim_link_normal_normal2bom_Data
+                                    : gPlayerAnim_link_normal_free2bom_Data,
+                        instant ? 7 : 19, PLAYER_AGE_ADULT, pos, angle);
   pullPos.y = pos.y;
   return pullPos;
 }

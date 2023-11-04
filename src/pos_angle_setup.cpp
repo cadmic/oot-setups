@@ -299,102 +299,53 @@ bool PosAngleSetup::jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed) {
 bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
                                bool shield) {
   PlayerAge age = this->col->age;
-  f32 ageScale = age == PLAYER_AGE_CHILD ? 0.64f : 1.0f;
 
-  Vec3f baseRoot = {-57, 3377, 0};
-  Vec3f prevRoot = rotate(baseRoot, this->angle);
-
-  // "home" in decomp, used for collision detection
+  Vec3f prevRoot = baseRootTranslation(this->angle);
   Vec3f prevPos = this->pos;
-  bool hit = false;
   f32 speed = 0.0f;
 
-  bool swingingSword = true;
-  f32 speedDecayRate = 5.0f;
-  u16* animData = slash.startAnimData;
-  int endFrame = slash.startAnimFrames - 1;
   f32 curFrame = 0;
-  f32 updateRate = 1.0f;
+  do {
+    updateRootTranslation(slash.startAnimData, curFrame, age, &this->pos,
+                          this->angle, &prevRoot);
 
-  Vec3f swordBase;
-  Vec3f swordTip;
-
-  // Apply first frame separately
-  Vec3f root = rotate(rootTranslation(animData, curFrame), this->angle);
-  Vec3f diff = root - prevRoot;
-  diff.y = 0.0f;
-  this->pos = this->pos + diff * ageScale * 0.01f;
-  prevRoot = root;
-
-  while (true) {
-    // printf(
-    //     "swingingSword=%d curFrame=%.1f "
-    //     "pos={%.9g (%08x), %.9g (%08x), %.9g (%08x)} "
-    //     "swordBase={%.9g, %.9g, %.9g} swordTip={%.9g, %.9g, %.9g} "
-    //     "speed=%.0f\n", swingingSword, curFrame, this->pos.x,
-    //     floatToInt(this->pos.x), this->pos.y, floatToInt(this->pos.y),
-    //     this->pos.z, floatToInt(this->pos.z), swordBase.x, swordBase.y,
-    //     swordBase.z, swordTip.x, swordTip.y, swordTip.z, speed);
+    bool swordHit = false;
+    if (curFrame >= 2) {
+      swordHit = swordRecoil(this->col, slash.startAnimData, curFrame, age,
+                             this->pos, this->angle);
+    }
 
     if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
       return false;
     }
     prevPos = this->pos;
 
-    if (swingingSword && lunge && curFrame == 0) {
+    if (lunge && curFrame == 0) {
       speed = 15.0f;
     }
 
-    if (!hit && curFrame >= 2) {
-      f32 dist = Math_Vec3f_DistXYZ(&swordTip, &swordBase);
-      Vec3f checkBase =
-          swordTip + (swordBase - swordTip) * ((dist + 10.0f) / dist);
-
-      CollisionPoly* outPoly;
-      this->col->entityLineTest(checkBase, swordTip, true, false, &outPoly);
-      if (outPoly) {
-        hit = true;
-        speed = -14.0f;
-      }
+    if (swordHit && speed >= 0.0f) {
+      speed = -14.0f;
     }
 
-    Math_StepToF(&speed, 0.0f, speedDecayRate);
+    Math_StepToF(&speed, 0.0f, 5.0f);
+  } while (nextAnimationFrame(&curFrame, slash.startAnimFrames - 1, 1.0f));
 
-    if (!swingingSword && shield) {
+  curFrame = 0.0f;
+  do {
+    updateRootTranslation(slash.endAnimData, curFrame, age, &this->pos,
+                          this->angle, &prevRoot);
+
+    if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
+      return false;
+    }
+    prevPos = this->pos;
+
+    Math_StepToF(&speed, 0.0f, 8.0f);
+    if (shield) {
       break;
     }
-
-    if (curFrame == endFrame) {
-      if (swingingSword) {
-        swingingSword = false;
-        speedDecayRate = 8.0f;
-        animData = slash.endAnimData;
-        endFrame = slash.endAnimFrames - 1;
-        curFrame = 0.0f;
-        updateRate = 1.5f;
-      } else {
-        break;
-      }
-    } else {
-      curFrame = std::min(curFrame + updateRate, (f32)endFrame);
-    }
-
-    Vec3f root = rotate(rootTranslation(animData, curFrame), this->angle);
-    Vec3f diff = root - prevRoot;
-    diff.y = 0.0f;
-    this->pos = this->pos + diff * ageScale * 0.01f;
-    prevRoot = root;
-
-    if (swingingSword) {
-      getSwordPosition(animData, curFrame, age, this->pos, this->angle,
-                       &swordBase, &swordTip);
-    }
-  }
-
-  // printf("x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) speed=%.0f\n",
-  //        this->pos.x, floatToInt(this->pos.x), this->pos.y,
-  //        floatToInt(this->pos.y), this->pos.z, floatToInt(this->pos.z),
-  //        speed);
+  } while (nextAnimationFrame(&curFrame, slash.endAnimFrames - 1, 1.5f));
 
   if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
     return false;
@@ -434,61 +385,26 @@ bool PosAngleSetup::jumpslash(bool shield) {
 
 bool PosAngleSetup::crouchStab() {
   PlayerAge age = this->col->age;
-
-  bool hit = false;
   f32 speed = 0.0f;
-
   u16* animData = gPlayerAnim_link_normal_defense_kiru_Data;
-  int endFrame = 4;
-  f32 curFrame = -1.5f;
-  f32 updateRate = 1.5f;
+  f32 curFrame = 0.0f;
 
-  Vec3f swordBase;
-  Vec3f swordTip;
-
-  while (true) {
-    // printf(
-    //     "curFrame=%.1f pos={%.9g (%08x), %.9g (%08x), %.9g (%08x)} "
-    //     "swordBase={%.9g, %.9g, %.9g} swordTip={%.9g, %.9g, %.9g} "
-    //     "speed=%.0f\n",
-    //     curFrame, this->pos.x, floatToInt(this->pos.x), this->pos.y,
-    //     floatToInt(this->pos.y), this->pos.z, floatToInt(this->pos.z),
-    //     swordBase.x, swordBase.y, swordBase.z, swordTip.x, swordTip.y,
-    //     swordTip.z, speed);
+  do {
+    bool swordHit = false;
+    if (curFrame >= 2) {
+      swordHit = swordRecoil(this->col, animData, curFrame, age, this->pos,
+                             this->angle);
+    }
 
     if (!moveOnGround(this->pos, this->angle, speed, -5.0f)) {
       return false;
     }
 
     Math_StepToF(&speed, 0.0f, 8.0f);
-
-    if (!hit) {
-      f32 dist = Math_Vec3f_DistXYZ(&swordTip, &swordBase);
-      Vec3f checkBase =
-          swordTip + (swordBase - swordTip) * ((dist + 10.0f) / dist);
-
-      CollisionPoly* outPoly;
-      this->col->entityLineTest(checkBase, swordTip, true, false, &outPoly);
-      if (outPoly) {
-        hit = true;
-        speed = -14.0f;
-      }
+    if (swordHit && speed >= 0.0f) {
+      speed = -14.0f;
     }
-
-    if (curFrame == endFrame) {
-      break;
-    } else {
-      curFrame = std::min(curFrame + updateRate, (f32)endFrame);
-    }
-
-    getSwordPosition(animData, curFrame, age, this->pos, this->angle,
-                     &swordBase, &swordTip);
-  }
-
-  // printf("x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) speed=%.0f\n",
-  // this->pos.x,
-  //        floatToInt(this->pos.x), this->pos.y, floatToInt(this->pos.y),
-  //        this->pos.z, floatToInt(this->pos.z), speed);
+  } while (nextAnimationFrame(&curFrame, 4, 1.5f));
 
   if (!moveOnGround(this->pos, this->angle, speed, -5.0f)) {
     return false;
