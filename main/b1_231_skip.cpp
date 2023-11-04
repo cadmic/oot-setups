@@ -100,7 +100,7 @@ bool testCompactSuperslideWorks(Vec3f pos, Vec3f bombPos, u16 angle,
         }
 
         hitShield = true;
-      } else if (Math3D_SphVsCylOverlapDist(&sphere, &cylinder, &overlapSize)) {
+      } else if (Math3D_SphVsCylOverlap(&sphere, &cylinder, &overlapSize)) {
         return false;  // hits Link
       }
     }

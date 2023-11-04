@@ -321,7 +321,7 @@ void testPosition(IceCollision* collision, f32 x, f32 z, u16 angle,
   Cylinder16 linkCylinder = {12, 32, 5, {-1351, 2, 154}};
   Sphere16 sphere = {explosionCenter, 64};
   f32 overlapSize;
-  if (Math3D_SphVsCylOverlapDist(&sphere, &linkCylinder, &overlapSize) ||
+  if (Math3D_SphVsCylOverlap(&sphere, &linkCylinder, &overlapSize) ||
       Math3D_Vec3f_DistXYZ(&centerf, &megaShieldCorner) > 72.0f) {
     return;
   }
