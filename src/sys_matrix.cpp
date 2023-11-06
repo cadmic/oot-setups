@@ -9,7 +9,7 @@
 // IDO, but is one with for example GCC. A partial workaround is to cast to s32
 // then s16, hoping all binang values used will fit a s32.
 #define TRUNCF_BINANG(f) (s16)(s32)(f)
-#define RAD_TO_BINANG(radians) (s16) TRUNCF_BINANG((radians) * (0x8000 / M_PI))
+#define RAD_TO_BINANG(radians) TRUNCF_BINANG((radians) * (0x8000 / M_PI))
 
 #define ASSERT(...)
 
