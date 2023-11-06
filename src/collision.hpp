@@ -62,7 +62,6 @@ void CollisionPoly_GetVertices(CollisionPoly* poly, Vec3s* vtxList,
 Vec3f CollisionPoly_GetNormalF(CollisionPoly* poly);
 
 struct Dyna {
-  MtxF mtx;
   f32 minY;
   f32 maxY;
   std::vector<Vec3s> vertices;
@@ -106,11 +105,13 @@ struct Collision {
                   CollisionPoly** floorPoly, f32* floorHeight);
   Vec3f runChecks(Vec3f prevPos, Vec3f intendedPos);
   // Snap down to the nearest floor below the given position
+  Vec3f findFloor(Vec3f pos, CollisionPoly** outPoly);
   Vec3f findFloor(Vec3f pos);
 
   // Run line test for entities
   Vec3f entityLineTest(Vec3f pos, Vec3f target, bool checkWalls,
-                       bool checkFloors, CollisionPoly** outPoly);
+                       bool checkFloors, bool checkCeilings,
+                       CollisionPoly** outPoly);
   // Run line test for camera
   Vec3f cameraLineTest(Vec3f pos, Vec3f target, CollisionPoly** outPoly);
   // Find floor for camera

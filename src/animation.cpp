@@ -206,7 +206,7 @@ bool swordRecoil(Collision* col, u16* animData, int frame, PlayerAge age,
   Vec3f checkBase = swordTip + (swordBase - swordTip) * ((dist + 10.0f) / dist);
 
   CollisionPoly* outPoly;
-  col->entityLineTest(checkBase, swordTip, true, false, &outPoly);
+  col->entityLineTest(checkBase, swordTip, true, false, false, &outPoly);
   if (outPoly) {
     return true;
   }

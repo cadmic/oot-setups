@@ -146,20 +146,31 @@ bool BgCheck_CheckLineAgainstDynaList(Collision* col, Dyna* dyna,
 }
 
 bool BgCheck_CheckLineImpl(Collision* col, Vec3f posPrev, Vec3f posNext,
-                           bool checkWalls, bool checkFloors, bool checkDyna,
+                           bool checkWalls, bool checkFloors,
+                           bool checkCeilings, bool checkDyna,
                            Vec3f* posIntersect, CollisionPoly** outPoly,
                            int* outDynaId) {
   bool result = false;
   Vec3f posA = posPrev;
   Vec3f posB = posNext;
   f32 minDistSq = 1.0e38f;
+
+  // bug? For scene collision, floors are checked before walls, while for
+  // dynapoly, walls are checked before floors.
   if (checkFloors && BgCheck_CheckLineAgainstList(col, &col->floors, posA,
                                                   &posB, &minDistSq, outPoly)) {
     *outDynaId = -1;
     result = true;
   }
 
-  if (BgCheck_CheckLineAgainstList(col, &col->walls, posA, &posB, &minDistSq,
+  if (checkWalls && BgCheck_CheckLineAgainstList(col, &col->walls, posA, &posB,
+                                                 &minDistSq, outPoly)) {
+    *outDynaId = -1;
+    result = true;
+  }
+
+  if (checkCeilings &&
+      BgCheck_CheckLineAgainstList(col, &col->ceilings, posA, &posB, &minDistSq,
                                    outPoly)) {
     *outDynaId = -1;
     result = true;
@@ -173,6 +184,13 @@ bool BgCheck_CheckLineImpl(Collision* col, Vec3f posPrev, Vec3f posNext,
         continue;
       }
 
+      if (checkWalls &&
+          BgCheck_CheckLineAgainstDynaList(col, dyna, &dyna->walls, posA, &posB,
+                                           &minDistSq, outPoly)) {
+        *outDynaId = i;
+        result = true;
+      }
+
       if (checkFloors &&
           BgCheck_CheckLineAgainstDynaList(col, dyna, &dyna->floors, posA,
                                            &posB, &minDistSq, outPoly)) {
@@ -180,9 +198,9 @@ bool BgCheck_CheckLineImpl(Collision* col, Vec3f posPrev, Vec3f posNext,
         result = true;
       }
 
-      if (checkWalls &&
-          BgCheck_CheckLineAgainstDynaList(col, dyna, &dyna->walls, posA, &posB,
-                                           &minDistSq, outPoly)) {
+      if (checkCeilings &&
+          BgCheck_CheckLineAgainstDynaList(col, dyna, &dyna->ceilings, posA,
+                                           &posB, &minDistSq, outPoly)) {
         *outDynaId = i;
         result = true;
       }
@@ -450,7 +468,7 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
     if (checkHeight + dy < 5.0f) {
       //! @bug checkHeight is not applied to posPrev/posNext
       Vec3f posIntersect;
-      if (BgCheck_CheckLineImpl(col, posPrev, posNext, true, true, true,
+      if (BgCheck_CheckLineImpl(col, posPrev, posNext, true, true, false, true,
                                 &posIntersect, &poly, &dynaId)) {
         result = true;
         *wallPoly = poly;
@@ -477,7 +495,7 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
 
       Vec3f posIntersect;
       if (BgCheck_CheckLineImpl(col, checkLinePrev, checkLineNext, true,
-                                checkFloors, true, &posIntersect, &poly,
+                                checkFloors, false, true, &posIntersect, &poly,
                                 &dynaId)) {
         *wallPoly = poly;
         Vec3f normal = CollisionPoly_GetNormalF(poly);
@@ -518,7 +536,7 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
   if (dynaResult || dynaId != -1) {
     Vec3f posIntersect;
     if (BgCheck_CheckLineImpl(col, posPrev, *posResult, true, false, false,
-                              &posIntersect, &poly, &dynaId)) {
+                              false, &posIntersect, &poly, &dynaId)) {
       Vec3f normal = CollisionPoly_GetNormalF(poly);
       f32 nXZDist = sqrtf(SQ(normal.x) + SQ(normal.z));
 
@@ -611,49 +629,19 @@ bool BgCheck_RaycastDownDynaList(Collision* col, Dyna* dyna,
 
 bool BgCheck_RaycastDownDyna(Collision* col, Vec3f pos, f32* floorHeight,
                              CollisionPoly** floorPoly) {
-  Dyna* floorDyna = NULL;
+  bool result = false;
   for (Dyna& dyna : col->dynas) {
     if (BgCheck_RaycastDownDynaList(col, &dyna, &dyna.floors, pos, floorHeight,
                                     floorPoly)) {
-      floorDyna = &dyna;
+      result = true;
     }
 
     if (BgCheck_RaycastDownDynaList(col, &dyna, &dyna.walls, pos, floorHeight,
                                     floorPoly)) {
-      floorDyna = &dyna;
+      result = true;
     }
   }
-
-  if (!floorDyna) {
-    return false;
-  }
-
-  Vec3f origVtx[3];
-  CollisionPoly_GetVertices(*floorPoly, floorDyna->vtxList, origVtx);
-
-  Vec3f polyVtx[3];
-  for (int i = 0; i < 3; i++) {
-    SkinMatrix_Vec3fMtxFMultXYZ(&floorDyna->mtx, &origVtx[i], &polyVtx[i]);
-  }
-
-  Vec3f polyNorm;
-  Math3D_SurfaceNorm(&polyVtx[0], &polyVtx[1], &polyVtx[2], &polyNorm);
-  f32 magnitude = Math3D_Vec3fMagnitude(&polyNorm);
-
-  if (!IS_ZERO(magnitude)) {
-    polyNorm = polyNorm * (1.0f / magnitude);
-    f32 polyDist = -DOTXYZ(polyNorm, polyVtx[0]);
-    f32 intersect;
-    if (Math3D_TriChkPointParaYIntersectInsideTri(
-            &polyVtx[0], &polyVtx[1], &polyVtx[2], polyNorm.x, polyNorm.y,
-            polyNorm.z, polyDist, pos.z, pos.x, &intersect, 1.0f)) {
-      if (fabsf(intersect - *floorHeight) < 1.0f) {
-        *floorHeight = intersect;
-      }
-    }
-  }
-
-  return true;
+  return result;
 }
 
 bool BgCheck_RaycastDownImpl(Collision* col, Vec3f pos, f32* floorHeight,
@@ -770,9 +758,9 @@ void Collision::addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot,
                             Vec3f pos) {
   Dyna dyna;
 
-  SkinMatrix_SetTranslateRotateYXZScale(&dyna.mtx, scale.x, scale.y, scale.z,
-                                        rot.x, rot.y, rot.z, pos.x, pos.y,
-                                        pos.z);
+  MtxF mtx;
+  SkinMatrix_SetTranslateRotateYXZScale(&mtx, scale.x, scale.y, scale.z, rot.x,
+                                        rot.y, rot.z, pos.x, pos.y, pos.z);
 
   dyna.minY = 1.0e38f;
   dyna.maxY = -1.0e38f;
@@ -780,7 +768,7 @@ void Collision::addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot,
   for (int i = 0; i < header->numVertices; i++) {
     Vec3f vtx = Vec3f(header->vertices[i]);
     Vec3f vtxT;  // Vtx after mtx transform
-    SkinMatrix_Vec3fMtxFMultXYZ(&dyna.mtx, &vtx, &vtxT);
+    SkinMatrix_Vec3fMtxFMultXYZ(&mtx, &vtx, &vtxT);
 
     dyna.minY = std::min(dyna.minY, vtxT.y);
     dyna.maxY = std::max(dyna.maxY, vtxT.y);
@@ -847,6 +835,8 @@ Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
     }
   }
 
+  // TODO: check ceilings
+
   return intendedPos;
 }
 
@@ -857,19 +847,25 @@ Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos) {
   return runChecks(prevPos, intendedPos, &wallPoly, &floorPoly, &floorHeight);
 }
 
-Vec3f Collision::findFloor(Vec3f pos) {
+Vec3f Collision::findFloor(Vec3f pos, CollisionPoly** outPoly) {
   f32 floorHeight;
-  CollisionPoly* poly;
-  BgCheck_RaycastDownImpl(this, pos, &floorHeight, &poly);
+  *outPoly = NULL;
+  BgCheck_RaycastDownImpl(this, pos, &floorHeight, outPoly);
   return Vec3f(pos.x, floorHeight, pos.z);
 }
 
+Vec3f Collision::findFloor(Vec3f pos) {
+  CollisionPoly* poly;
+  return findFloor(pos, &poly);
+}
+
 Vec3f Collision::entityLineTest(Vec3f pos, Vec3f target, bool checkWalls,
-                                bool checkFloors, CollisionPoly** outPoly) {
+                                bool checkFloors, bool checkCeilings,
+                                CollisionPoly** outPoly) {
   *outPoly = NULL;
   int dynaId;
-  BgCheck_CheckLineImpl(this, pos, target, checkWalls, checkFloors, true,
-                        &target, outPoly, &dynaId);
+  BgCheck_CheckLineImpl(this, pos, target, checkWalls, checkFloors,
+                        checkCeilings, true, &target, outPoly, &dynaId);
   return target;
 }
 
@@ -877,8 +873,8 @@ Vec3f Collision::cameraLineTest(Vec3f pos, Vec3f target,
                                 CollisionPoly** outPoly) {
   *outPoly = NULL;
   int dynaId;
-  BgCheck_CheckLineImpl(this, pos, target, true, true, true, &target, outPoly,
-                        &dynaId);
+  BgCheck_CheckLineImpl(this, pos, target, true, true, true, true, &target,
+                        outPoly, &dynaId);
   return target;
 }
 
