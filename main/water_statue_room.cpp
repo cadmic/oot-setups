@@ -238,7 +238,7 @@ void findPosAngleSetups(Collision* col) {
 
   std::vector<Action> addlActions = {
       ROLL,
-      LONGROLL,
+      LONG_ROLL,
       SHIELD_SCOOT,
       BACKFLIP,
       BACKFLIP_SIDEROLL,

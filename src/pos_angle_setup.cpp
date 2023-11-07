@@ -23,7 +23,7 @@ int actionCost(Action action) {
   switch (action) {
     case ROLL:
       return 13;
-    case LONGROLL:
+    case LONG_ROLL:
       return 20;
     case SHIELD_SCOOT:
       return 10;
@@ -61,6 +61,8 @@ int actionCost(Action action) {
       return 32;
     case JUMPSLASH_SHIELD:
       return 20;
+    case LONG_JUMPSLASH_SHIELD:
+      return 24;
     case CROUCH_STAB:
       return 8;
     case TURN_ESS_UP:
@@ -269,7 +271,7 @@ bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
   return true;
 }
 
-bool PosAngleSetup::longroll() {
+bool PosAngleSetup::longRoll() {
   for (int i = 0; i < 12; i++) {
     // 11 frames of roll up to 9 speed, 1 frame of 1 speed
     f32 xzSpeed = 0.0f;
@@ -394,10 +396,11 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
   return true;
 }
 
-bool PosAngleSetup::jumpslash(bool shield) {
+bool PosAngleSetup::jumpslash(bool holdUp, bool shield) {
   f32 xzSpeed = 5.0f;
   f32 ySpeed = 5.0f;
   f32 gravity = 1.0f;
+  f32 accel = holdUp ? 0.05f : -0.1f;
 
   bool onGround;
   for (int i = 0; i < 20; i++) {
@@ -408,7 +411,7 @@ bool PosAngleSetup::jumpslash(bool shield) {
       return false;
     }
 
-    xzSpeed -= 0.1f;
+    xzSpeed += accel;
     gravity = 1.2f;
 
     if (onGround) {
@@ -457,8 +460,8 @@ bool PosAngleSetup::performAction(Action action) {
   switch (action) {
     case ROLL:
       return roll(this->angle, false);
-    case LONGROLL:
-      return longroll();
+    case LONG_ROLL:
+      return longRoll();
     case SHIELD_SCOOT:
       return shieldScoot();
     case SIDEHOP_LEFT:
@@ -514,9 +517,11 @@ bool PosAngleSetup::performAction(Action action) {
     case FORWARD_STAB_SHIELD:
       return swordSlash(forwardStab, true, true);
     case JUMPSLASH:
-      return jumpslash(false);
+      return jumpslash(false, false);
     case JUMPSLASH_SHIELD:
-      return jumpslash(true);
+      return jumpslash(false, true);
+    case LONG_JUMPSLASH_SHIELD:
+      return jumpslash(true, true);
     case CROUCH_STAB:
       return crouchStab();
     case TURN_ESS_LEFT:

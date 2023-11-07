@@ -9,7 +9,7 @@
 
 #define ACTIONS                      \
   X(ROLL)                            \
-  X(LONGROLL)                        \
+  X(LONG_ROLL)                       \
   X(SHIELD_SCOOT)                    \
   X(SIDEHOP_LEFT)                    \
   X(SIDEHOP_LEFT_SIDEROLL)           \
@@ -30,6 +30,7 @@
   X(FORWARD_STAB_SHIELD)             \
   X(JUMPSLASH)                       \
   X(JUMPSLASH_SHIELD)                \
+  X(LONG_JUMPSLASH_SHIELD)           \
   X(CROUCH_STAB)                     \
   X(TURN_ESS_LEFT)                   \
   X(TURN_2_ESS_LEFT)                 \
@@ -87,10 +88,10 @@ struct PosAngleSetup {
             bool* onGround);
   bool moveOnGround(Vec3f prevPos, u16 movementAngle, f32 xzSpeed, f32 ySpeed);
   bool roll(u16 movementAngle, bool retarget);
-  bool longroll();
+  bool longRoll();
   bool shieldScoot();
   bool jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed);
   bool swordSlash(const SwordSlash& slash, bool lunge, bool shield);
-  bool jumpslash(bool shield);
+  bool jumpslash(bool holdUp, bool shield);
   bool crouchStab();
 };
