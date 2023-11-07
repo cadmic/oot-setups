@@ -3,7 +3,7 @@
 #include "actor.hpp"
 #include "animation.hpp"
 #include "animation_data.hpp"
-#include "camera_angles.hpp"
+#include "camera.hpp"
 #include "sys_math.hpp"
 #include "sys_math3d.hpp"
 #include "sys_matrix.hpp"
@@ -142,6 +142,25 @@ SwordSlash jumpslashLanding = {
     .endAnimFrames = 20,
 };
 
+PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
+                             Vec3f minBounds, Vec3f maxBounds)
+    : col(col),
+      minBounds(minBounds),
+      maxBounds(maxBounds),
+      pos(initialPos),
+      angle(initialAngle),
+      floorPoly(NULL),
+      dynaId(-1) {}
+
+PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
+    : col(col),
+      minBounds(Vec3f(-10000, -10000, -10000)),
+      maxBounds(Vec3f(10000, 10000, 10000)),
+      pos(initialPos),
+      angle(initialAngle),
+      floorPoly(NULL),
+      dynaId(-1) {}
+
 bool PosAngleSetup::essLeft(int n) {
   this->angle += n * 0x708;
   return true;
@@ -149,6 +168,23 @@ bool PosAngleSetup::essLeft(int n) {
 
 bool PosAngleSetup::essRight(int n) {
   this->angle -= n * 0x708;
+  return true;
+}
+
+bool PosAngleSetup::cameraTurn(u16 offset) {
+  if (!this->floorPoly) {
+    this->col->findFloor({this->pos.x, this->pos.y + 50.0f, this->pos.z},
+                         &this->floorPoly, &this->dynaId);
+    if (!this->floorPoly) {
+      return false;
+    }
+  }
+
+  int setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
+  Camera camera(this->col);
+  camera.initParallel(this->pos, this->angle, setting);
+  camera.updateNormal(this->pos, this->angle, setting);
+  this->angle = camera.yaw() + offset;
   return true;
 }
 
@@ -162,10 +198,10 @@ bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
   Vec3f intendedPos = translate(pos, movementAngle, xzSpeed, ySpeed);
 
   CollisionPoly* wallPoly;
-  CollisionPoly* floorPoly;
   f32 floorHeight;
-  this->pos = this->col->runChecks(prevPos, intendedPos, &wallPoly, &floorPoly,
-                                   &floorHeight);
+  this->pos =
+      this->col->runChecks(prevPos, intendedPos, &wallPoly, &this->floorPoly,
+                           &this->dynaId, &floorHeight);
   *onGround = (this->pos.y <= floorHeight);
 
   // Check bounds
@@ -512,17 +548,13 @@ bool PosAngleSetup::performAction(Action action) {
     case TURN_7_ESS_RIGHT:
       return essRight(7);
     case TURN_ESS_UP:
-      this->angle = cameraAngles[this->angle];
-      return true;
+      return cameraTurn(0x0000);
     case TURN_LEFT:
-      this->angle = cameraAngles[this->angle] + 0x4000;
-      return true;
+      return cameraTurn(0x4000);
     case TURN_RIGHT:
-      this->angle = cameraAngles[this->angle] - 0x4000;
-      return true;
+      return cameraTurn(0xc000);
     case TURN_DOWN:
-      this->angle = cameraAngles[this->angle] + 0x8000;
-      return true;
+      return cameraTurn(0x8000);
   }
   return false;
 }

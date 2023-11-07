@@ -50,8 +50,10 @@ bool simulateHess(Collision* col, Vec3f pos, f32 speed, u16 startAngle,
     // Collision check
     CollisionPoly* wallPoly;
     CollisionPoly* floorPoly;
+    int dynaId;
     f32 floorHeight;
-    posNext = col->runChecks(pos, posNext, &wallPoly, &floorPoly, &floorHeight);
+    posNext = col->runChecks(pos, posNext, &wallPoly, &floorPoly, &dynaId,
+                             &floorHeight);
 
     if (posNext.y <= floorHeight) {  // on ground
       // Not technically correct but close enough. There's a frame of
@@ -90,7 +92,7 @@ void findHessPositions(Collision* col, u16 angle, f32 speed) {
 
       // camera consistency check
       Camera camera(col);
-      int setting = 3;  // TODO use floor
+      int setting = 3;  // TODO: use floor?
       u16 facingAngle = angle - (7 * 0x708) + 0x48;
       camera.initParallel(pos, facingAngle, setting);
       camera.updateNormal(pos, facingAngle, setting);
@@ -383,30 +385,12 @@ void findHessSetupPositions(Collision* col) {
   }
 }
 
-void cameraTurn(PosAngleSetup* setup, u16 increment) {
-  int setting = 3;  // TODO: use correct setting
-  Camera camera(setup->col);
-  camera.initParallel(setup->pos, setup->angle, setting);
-  camera.updateNormal(setup->pos, setup->angle, setting);
-  u16 angle = camera.yaw() + increment;
-  setup->angle = angle;
-}
-
 void testPosAngleSetup(Collision* col, Vec3f initialPos,
                        const std::vector<Action>& actions, bool debug) {
   PosAngleSetup setup(col, initialPos, 0x8000, {-140, -340, -2415},
                       {80, -200, -1840});
-
-  for (Action action : actions) {
-    if (action == TURN_LEFT) {
-      cameraTurn(&setup, 0x4000);
-    } else if (action == TURN_DOWN) {
-      cameraTurn(&setup, 0x8000);
-    } else if (action == TURN_RIGHT) {
-      cameraTurn(&setup, 0xc000);
-    } else if (!setup.performAction(action)) {
-      return;
-    }
+  if (!setup.performActions(actions)) {
+    return;
   }
 
   Vec3f pos = setup.pos;

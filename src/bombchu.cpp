@@ -13,7 +13,8 @@ Bombchu::Bombchu(Collision* col, Vec3f pos, u16 angle) {
   this->axisLeft = {Math_SinS(angle + 0x4000), 0.0f, Math_CosS(angle + 0x4000)};
 
   CollisionPoly* poly;
-  col->findFloor({pos.x, pos.y + 50.0f, pos.z}, &poly);
+  int dynaId;
+  col->findFloor({pos.x, pos.y + 50.0f, pos.z}, &poly, &dynaId);
   if (poly != NULL) {
     this->updateFloorPoly(poly);
   } else {

@@ -68,21 +68,12 @@ struct PosAngleSetup {
   Vec3f maxBounds;
   Vec3f pos;
   u16 angle;
+  CollisionPoly* floorPoly;
+  int dynaId;
 
   PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
-                Vec3f minBounds, Vec3f maxBounds)
-      : col(col),
-        minBounds(minBounds),
-        maxBounds(maxBounds),
-        pos(initialPos),
-        angle(initialAngle) {}
-
-  PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
-      : col(col),
-        minBounds(Vec3f(-10000, -10000, -10000)),
-        maxBounds(Vec3f(10000, 10000, 10000)),
-        pos(initialPos),
-        angle(initialAngle) {}
+                Vec3f minBounds, Vec3f maxBounds);
+  PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle);
 
   // Returns true if the action was performed successfully.
   bool performAction(Action action);
@@ -90,6 +81,7 @@ struct PosAngleSetup {
 
   bool essLeft(int n);
   bool essRight(int n);
+  bool cameraTurn(u16 offset);
   bool settle();
   bool move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed, f32 ySpeed,
             bool* onGround);

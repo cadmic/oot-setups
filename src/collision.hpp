@@ -69,6 +69,7 @@ struct Dyna {
   std::vector<CollisionPoly> floors;
   std::vector<CollisionPoly> ceilings;
 
+  CollisionHeader* header;
   Vec3s* vtxList;
 };
 
@@ -102,10 +103,10 @@ struct Collision {
 
   // Run wall and ceiling checks, displacing the intended position
   Vec3f runChecks(Vec3f prevPos, Vec3f intendedPos, CollisionPoly** wallPoly,
-                  CollisionPoly** floorPoly, f32* floorHeight);
+                  CollisionPoly** floorPoly, int* dynaId, f32* floorHeight);
   Vec3f runChecks(Vec3f prevPos, Vec3f intendedPos);
   // Snap down to the nearest floor below the given position
-  Vec3f findFloor(Vec3f pos, CollisionPoly** outPoly);
+  Vec3f findFloor(Vec3f pos, CollisionPoly** outPoly, int* dynaId);
   Vec3f findFloor(Vec3f pos);
 
   // Run line test for entities
@@ -116,4 +117,7 @@ struct Collision {
   Vec3f cameraLineTest(Vec3f pos, Vec3f target, CollisionPoly** outPoly);
   // Find floor for camera
   f32 cameraFindFloor(Vec3f pos, CollisionPoly** outPoly);
+
+  // Get camera setting for floor poly
+  int getCameraSetting(CollisionPoly* poly, int dynaId);
 };

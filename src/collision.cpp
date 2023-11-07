@@ -584,17 +584,19 @@ bool BgCheck_RaycastDownStaticList(Collision* col,
 }
 
 bool BgCheck_RaycastDownStatic(Collision* col, Vec3f pos, f32* floorHeight,
-                               CollisionPoly** floorPoly) {
+                               CollisionPoly** floorPoly, int* dynaId) {
   bool result = false;
   *floorHeight = BGCHECK_Y_MIN;
 
   if (BgCheck_RaycastDownStaticList(col, &col->floors, pos, floorHeight,
                                     floorPoly)) {
+    *dynaId = -1;
     result = true;
   }
 
   if (BgCheck_RaycastDownStaticList(col, &col->walls, pos, floorHeight,
                                     floorPoly)) {
+    *dynaId = -1;
     result = true;
   }
 
@@ -628,16 +630,19 @@ bool BgCheck_RaycastDownDynaList(Collision* col, Dyna* dyna,
 }
 
 bool BgCheck_RaycastDownDyna(Collision* col, Vec3f pos, f32* floorHeight,
-                             CollisionPoly** floorPoly) {
+                             CollisionPoly** floorPoly, int* dynaId) {
   bool result = false;
-  for (Dyna& dyna : col->dynas) {
-    if (BgCheck_RaycastDownDynaList(col, &dyna, &dyna.floors, pos, floorHeight,
+  for (int i = 0; i < col->dynas.size(); i++) {
+    Dyna* dyna = &col->dynas[i];
+    if (BgCheck_RaycastDownDynaList(col, dyna, &dyna->floors, pos, floorHeight,
                                     floorPoly)) {
+      *dynaId = i;
       result = true;
     }
 
-    if (BgCheck_RaycastDownDynaList(col, &dyna, &dyna.walls, pos, floorHeight,
+    if (BgCheck_RaycastDownDynaList(col, dyna, &dyna->walls, pos, floorHeight,
                                     floorPoly)) {
+      *dynaId = i;
       result = true;
     }
   }
@@ -645,15 +650,15 @@ bool BgCheck_RaycastDownDyna(Collision* col, Vec3f pos, f32* floorHeight,
 }
 
 bool BgCheck_RaycastDownImpl(Collision* col, Vec3f pos, f32* floorHeight,
-                             CollisionPoly** floorPoly) {
+                             CollisionPoly** floorPoly, int* dynaId) {
   bool result = false;
   *floorHeight = BGCHECK_Y_MIN;
 
-  if (BgCheck_RaycastDownStatic(col, pos, floorHeight, floorPoly)) {
+  if (BgCheck_RaycastDownStatic(col, pos, floorHeight, floorPoly, dynaId)) {
     result = true;
   }
 
-  if (BgCheck_RaycastDownDyna(col, pos, floorHeight, floorPoly)) {
+  if (BgCheck_RaycastDownDyna(col, pos, floorHeight, floorPoly, dynaId)) {
     result = true;
   }
 
@@ -807,13 +812,14 @@ void Collision::addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot,
   std::reverse(dyna.ceilings.begin(), dyna.ceilings.end());
   std::reverse(dyna.walls.begin(), dyna.walls.end());
 
+  dyna.header = header;
   dyna.vtxList = header->vertices;
   this->dynas.push_back(dyna);
 }
 
 Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
                            CollisionPoly** wallPoly, CollisionPoly** floorPoly,
-                           f32* floorHeight) {
+                           int* dynaId, f32* floorHeight) {
   *wallPoly = NULL;
   *floorPoly = NULL;
   *floorHeight = -32000.0f;
@@ -828,7 +834,7 @@ Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
   // Check floors
   Vec3f checkPos = intendedPos;
   checkPos.y = prevPos.y + 50.0f;
-  if (BgCheck_RaycastDownImpl(this, checkPos, floorHeight, floorPoly)) {
+  if (BgCheck_RaycastDownImpl(this, checkPos, floorHeight, floorPoly, dynaId)) {
     f32 floorHeightDiff = *floorHeight - intendedPos.y;
     if (floorHeightDiff >= 0.0f) {  // actor is on or below the ground
       intendedPos.y = *floorHeight;
@@ -843,20 +849,24 @@ Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
 Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos) {
   CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
+  int dynaId;
   f32 floorHeight;
-  return runChecks(prevPos, intendedPos, &wallPoly, &floorPoly, &floorHeight);
+  return runChecks(prevPos, intendedPos, &wallPoly, &floorPoly, &dynaId,
+                   &floorHeight);
 }
 
-Vec3f Collision::findFloor(Vec3f pos, CollisionPoly** outPoly) {
+Vec3f Collision::findFloor(Vec3f pos, CollisionPoly** outPoly, int* dynaId) {
   f32 floorHeight;
   *outPoly = NULL;
-  BgCheck_RaycastDownImpl(this, pos, &floorHeight, outPoly);
+  *dynaId = -1;
+  BgCheck_RaycastDownImpl(this, pos, &floorHeight, outPoly, dynaId);
   return Vec3f(pos.x, floorHeight, pos.z);
 }
 
 Vec3f Collision::findFloor(Vec3f pos) {
   CollisionPoly* poly;
-  return findFloor(pos, &poly);
+  int dynaId;
+  return findFloor(pos, &poly, &dynaId);
 }
 
 Vec3f Collision::entityLineTest(Vec3f pos, Vec3f target, bool checkWalls,
@@ -881,6 +891,19 @@ Vec3f Collision::cameraLineTest(Vec3f pos, Vec3f target,
 f32 Collision::cameraFindFloor(Vec3f pos, CollisionPoly** outPoly) {
   *outPoly = NULL;
   f32 floorHeight;
-  BgCheck_RaycastDownImpl(this, pos, &floorHeight, outPoly);
+  int dynaId;
+  BgCheck_RaycastDownImpl(this, pos, &floorHeight, outPoly, &dynaId);
   return floorHeight;
+}
+
+int Collision::getCameraSetting(CollisionPoly* poly, int dynaId) {
+  CollisionHeader* header;
+  if (dynaId == -1) {
+    header = this->header;
+  } else {
+    header = this->dynas[dynaId].header;
+  }
+
+  int bgCamIndex = header->surfaceTypeList[poly->type].data[0] & 0xFF;
+  return header->bgCamList[bgCamIndex].setting;
 }

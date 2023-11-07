@@ -727,26 +727,8 @@ void searchSetups(Collision* col, Vec3f initialPos, u16 initialAngle,
     }
 
     PosAngleSetup setup(col, pos, angle);
-    switch (action) {
-      // TODO: put in PosAngleSetup (need to detect camera setting from floor
-      // poly)
-      case TURN_ESS_UP:
-        setup.angle = essUpAngle(col, pos, angle);
-        break;
-      case TURN_LEFT:
-        setup.angle = essUpAngle(col, pos, angle) + 0x4000;
-        break;
-      case TURN_DOWN:
-        setup.angle = essUpAngle(col, pos, angle) + 0x8000;
-        break;
-      case TURN_RIGHT:
-        setup.angle = essUpAngle(col, pos, angle) + 0xc000;
-        break;
-      default:
-        if (!setup.performAction(action)) {
-          continue;
-        }
-        break;
+    if (!setup.performAction(action)) {
+      continue;
     }
     if (setup.pos == pos && setup.angle == angle) {
       continue;

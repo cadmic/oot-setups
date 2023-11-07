@@ -7,6 +7,7 @@ extern CollisionHeader object_haka_objects_Col_00A938;
 bool testClip(Collision* col, Vec3f pos, u16 angle, bool debug) {
   CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
+  int dynaId;
   f32 floorHeight = BGCHECK_Y_MIN;
 
   f32 yvel = 4.8f;
@@ -28,7 +29,7 @@ bool testClip(Collision* col, Vec3f pos, u16 angle, bool debug) {
 
     yvel -= 1.0f;
     pos = col->runChecks(pos, translate(pos, angle, -18.0f, yvel), &wallPoly,
-                         &floorPoly, &floorHeight);
+                         &floorPoly, &dynaId, &floorHeight);
   }
 
   if (debug) {

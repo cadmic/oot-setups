@@ -173,9 +173,10 @@ void walkToDoor(Collision* col, Vec3f pos, u16 angle, int numFrames,
 
     CollisionPoly* wallPoly;
     CollisionPoly* floorPoly;
+    int dynaId;
     f32 floorHeight;
     pos = col->runChecks(pos, translate(pos, movementAngle, speed, 0.0f),
-                         &wallPoly, &floorPoly, &floorHeight);
+                         &wallPoly, &floorPoly, &dynaId, &floorHeight);
 
     f32 targetSpeed;
     if (i < numFrames) {
