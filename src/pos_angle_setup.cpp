@@ -353,9 +353,20 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
                              this->pos, this->angle);
     }
 
-    if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
+    bool onGround;
+    if (!move(prevPos, this->angle, speed, -5.0f, &onGround)) {
       return false;
     }
+
+    if (!onGround) {
+      if (curFrame >= 2) {
+        this->pos = prevPos;
+        speed = 0.0f;
+      } else {
+        return false;
+      }
+    }
+
     prevPos = this->pos;
 
     if (lunge && curFrame == 0) {
@@ -435,8 +446,19 @@ bool PosAngleSetup::crouchStab() {
                              this->angle);
     }
 
-    if (!moveOnGround(this->pos, this->angle, speed, -5.0f)) {
+    Vec3f prevPos = this->pos;
+    bool onGround;
+    if (!move(this->pos, this->angle, speed, -5.0f, &onGround)) {
       return false;
+    }
+
+    if (!onGround) {
+      if (curFrame >= 2) {
+        this->pos = prevPos;
+        speed = 0.0f;
+      } else {
+        return false;
+      }
     }
 
     Math_StepToF(&speed, 0.0f, 8.0f);
