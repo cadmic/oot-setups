@@ -182,12 +182,23 @@ bool PosAngleSetup::cameraTurn(u16 offset) {
     }
   }
 
+  // TODO: cache camera angle?
   int setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
   Camera camera(this->col);
   camera.initParallel(this->pos, this->angle, setting);
   camera.updateNormal(this->pos, this->angle, setting);
-  this->angle = camera.yaw() + offset;
-  return true;
+  u16 cameraAngle = camera.yaw();
+  for (int i = 0; i < 5; i++) {
+    camera.updateNormal(this->pos, this->angle, setting);
+    u16 newCameraAngle = camera.yaw();
+    if (newCameraAngle == cameraAngle) {
+      this->angle = cameraAngle + offset;
+      return true;
+    }
+    cameraAngle = newCameraAngle;
+  }
+
+  return false;
 }
 
 bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
