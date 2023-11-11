@@ -43,6 +43,8 @@ bool nextAnimFrame(f32* curFrame, int endFrame, f32 updateRate);
 // Load an animation frame from the animation data.
 void loadAnimFrame(u16* animData, int frame, AnimFrame* animFrame);
 
+// Load only the upper body part of animation frame from the animation data.
+void loadUpperBodyAnimFrame(u16* animData, int frame, AnimFrame* animFrame);
 
 // Apply animation frame, outputting matrices for each limb.
 void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
@@ -69,3 +71,6 @@ void getSwordPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
 bool swordRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, Vec3f pos,
                  u16 angle);
 
+// Compute shield corner positions. The order is DR, UR, DL, UL.
+void getShieldPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos,
+                       u16 angle, Vec3f* outCorners);

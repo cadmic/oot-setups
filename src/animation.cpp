@@ -78,6 +78,13 @@ void loadAnimFrame(u16* animData, int frame, AnimFrame* animFrame) {
          sizeof(AnimFrame));
 }
 
+void loadUpperBodyAnimFrame(u16* animData, int frame, AnimFrame* animFrame) {
+  memcpy(&animFrame->jointTable[10],
+         &animData[frame * sizeof(AnimFrame) / sizeof(u16) +
+                   10 * sizeof(Vec3s) / sizeof(u16)],
+         sizeof(AnimFrame) - 10 * sizeof(Vec3s));
+}
+
 void applyLimb(Limb* skeleton, AnimFrame* animFrame, u8 limbIndex,
                MtxF* outLimbMatrices) {
   Limb* limb = &skeleton[limbIndex];
@@ -189,4 +196,23 @@ bool swordRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, Vec3f pos,
   }
 
   return false;
+}
+
+Vec3f sShieldQuadVertices[] = {
+    {-4500.0f, -3000.0f, -600.0f},
+    {1500.0f, -3000.0f, -600.0f},
+    {-4500.0f, 3000.0f, -600.0f},
+    {1500.0f, 3000.0f, -600.0f},
+};
+
+void getShieldPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos,
+                       u16 angle, Vec3f* outCorners) {
+  MtxF limbMatrices[PLAYER_LIMB_MAX];
+  applyAnimFrame(animFrame, age, pos, angle, limbMatrices);
+
+  MtxF* mtx = &limbMatrices[PLAYER_LIMB_R_HAND];
+  Matrix_MultVec3fExt(&sShieldQuadVertices[0], &outCorners[0], mtx);
+  Matrix_MultVec3fExt(&sShieldQuadVertices[1], &outCorners[1], mtx);
+  Matrix_MultVec3fExt(&sShieldQuadVertices[2], &outCorners[2], mtx);
+  Matrix_MultVec3fExt(&sShieldQuadVertices[3], &outCorners[3], mtx);
 }
