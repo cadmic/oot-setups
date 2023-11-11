@@ -9,8 +9,9 @@
 #include "sys_math.hpp"
 
 Vec3f throwPosition(Vec3f pos, u16 angle) {
-  return heldActorPosition(gPlayerAnim_link_normal_throw_free_Data, 1,
-                           PLAYER_AGE_CHILD, pos, angle);
+  AnimFrame animFrame;
+  loadAnimFrame(gPlayerAnim_link_normal_throw_free_Data, 1, &animFrame);
+  return heldActorPosition(&animFrame, PLAYER_AGE_CHILD, pos, angle);
 }
 
 Vec3s guardPosition(Vec3f pos) {

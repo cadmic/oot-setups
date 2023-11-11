@@ -9,10 +9,11 @@
 #include "sys_math3d.hpp"
 
 Vec3f dropBomb(Vec3f pos, u16 angle, bool instant, bool swordInHand) {
-  Vec3f pullPos =
-      heldActorPosition(swordInHand ? gPlayerAnim_link_normal_normal2bom_Data
-                                    : gPlayerAnim_link_normal_free2bom_Data,
-                        instant ? 7 : 19, PLAYER_AGE_ADULT, pos, angle);
+  AnimFrame animFrame;
+  loadAnimFrame(swordInHand ? gPlayerAnim_link_normal_normal2bom_Data
+                            : gPlayerAnim_link_normal_free2bom_Data,
+                instant ? 7 : 19, &animFrame);
+  Vec3f pullPos = heldActorPosition(&animFrame, PLAYER_AGE_ADULT, pos, angle);
   pullPos.y = pos.y;
   return pullPos;
 }

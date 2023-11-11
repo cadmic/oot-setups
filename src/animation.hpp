@@ -30,33 +30,42 @@ enum PlayerLimb {
   /* 0x16 */ PLAYER_LIMB_MAX
 };
 
-// Apply animation frame overriding root translation, outputting matrices for
-// each limb
-void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
-                    u16 angle, Vec3f rootTranslation, MtxF* outLimbMatrices);
+struct AnimFrame {
+  // Entry 0 is actually root limb position
+  Vec3s jointTable[22];
+  s16 face;
+};
 
-// Apply animation frame, outputting matrices for each limb
-void applyAnimation(u16* animData, int frame, PlayerAge age, Vec3f pos,
-                    u16 angle, MtxF* outLimbMatrices);
+// Advance to the next frame in the animation. Returns false if the animation is
+// finished.
+bool nextAnimFrame(f32* curFrame, int endFrame, f32 updateRate);
 
-// Advance to the next frame in the animation
-bool nextAnimationFrame(f32* curFrame, int endFrame, f32 updateRate);
+// Load an animation frame from the animation data.
+void loadAnimFrame(u16* animData, int frame, AnimFrame* animFrame);
 
-// Default root translation for Link's skeleton
+
+// Apply animation frame, outputting matrices for each limb.
+void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
+                    MtxF* outLimbMatrices);
+
+// Default root translation for Link's skeleton.
 Vec3f baseRootTranslation(u16 angle);
 
-// Update Link's position based on the animation
-void updateRootTranslation(u16* animData, int frame, PlayerAge age, Vec3f* pos,
+// Update Link's position based on the animation and previous root translation.
+// This update the Link's position, the previous root translation, and reset the
+// xz root translation in the animation frame.
+void updateRootTranslation(AnimFrame* animFrame, PlayerAge age, Vec3f* pos,
                            u16 angle, Vec3f* prevRootTranslation);
 
-// Compute held actor position, halfway between Link's hands
-Vec3f heldActorPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
+// Compute held actor position, halfway between Link's hands.
+Vec3f heldActorPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos,
                         u16 angle);
 
-// Compute sword base and tip positions
-void getSwordPosition(u16* animData, int frame, PlayerAge age, Vec3f pos,
-                      u16 angle, Vec3f* outBase, Vec3f* outTip);
+// Compute sword base and tip positions.
+void getSwordPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
+                      Vec3f* outBase, Vec3f* outTip);
 
-// Tests if sword collides with a wall
-bool swordRecoil(Collision* col, u16* animData, int frame, PlayerAge age,
-                 Vec3f pos, u16 angle);
+// Tests if sword collides with a wall.
+bool swordRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, Vec3f pos,
+                 u16 angle);
+

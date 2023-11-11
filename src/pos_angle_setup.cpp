@@ -353,15 +353,16 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
   Vec3f prevPos = this->pos;
   f32 speed = 0.0f;
 
+  AnimFrame animFrame;
   f32 curFrame = 0;
   do {
-    updateRootTranslation(slash.startAnimData, curFrame, age, &this->pos,
-                          this->angle, &prevRoot);
+    loadAnimFrame(slash.startAnimData, curFrame, &animFrame);
+    updateRootTranslation(&animFrame, age, &this->pos, this->angle, &prevRoot);
 
     bool swordHit = false;
     if (curFrame >= 2) {
-      swordHit = swordRecoil(this->col, slash.startAnimData, curFrame, age,
-                             this->pos, this->angle);
+      swordHit =
+          swordRecoil(this->col, &animFrame, age, this->pos, this->angle);
     }
 
     bool onGround;
@@ -389,12 +390,12 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
     }
 
     Math_StepToF(&speed, 0.0f, 5.0f);
-  } while (nextAnimationFrame(&curFrame, slash.startAnimFrames - 1, 1.0f));
+  } while (nextAnimFrame(&curFrame, slash.startAnimFrames - 1, 1.0f));
 
   curFrame = 0.0f;
   do {
-    updateRootTranslation(slash.endAnimData, curFrame, age, &this->pos,
-                          this->angle, &prevRoot);
+    loadAnimFrame(slash.endAnimData, curFrame, &animFrame);
+    updateRootTranslation(&animFrame, age, &this->pos, this->angle, &prevRoot);
 
     if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
       return false;
@@ -405,7 +406,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
     if (shield) {
       break;
     }
-  } while (nextAnimationFrame(&curFrame, slash.endAnimFrames - 1, 1.5f));
+  } while (nextAnimFrame(&curFrame, slash.endAnimFrames - 1, 1.5f));
 
   if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
     return false;
@@ -447,14 +448,16 @@ bool PosAngleSetup::jumpslash(bool holdUp, bool shield) {
 bool PosAngleSetup::crouchStab() {
   PlayerAge age = this->col->age;
   f32 speed = 0.0f;
-  u16* animData = gPlayerAnim_link_normal_defense_kiru_Data;
-  f32 curFrame = 0.0f;
 
+  AnimFrame animFrame;
+  f32 curFrame = 0.0f;
   do {
     bool swordHit = false;
     if (curFrame >= 2) {
-      swordHit = swordRecoil(this->col, animData, curFrame, age, this->pos,
-                             this->angle);
+      loadAnimFrame(gPlayerAnim_link_normal_defense_kiru_Data, curFrame,
+                    &animFrame);
+      swordHit =
+          swordRecoil(this->col, &animFrame, age, this->pos, this->angle);
     }
 
     Vec3f prevPos = this->pos;
@@ -476,7 +479,7 @@ bool PosAngleSetup::crouchStab() {
     if (swordHit && speed >= 0.0f) {
       speed = -14.0f;
     }
-  } while (nextAnimationFrame(&curFrame, 4, 1.5f));
+  } while (nextAnimFrame(&curFrame, 4, 1.5f));
 
   if (!moveOnGround(this->pos, this->angle, speed, -5.0f)) {
     return false;
