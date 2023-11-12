@@ -13,11 +13,11 @@ struct Bombchu {
   Vec3f axisLeft;
   CollisionPoly* floorPoly;
 
-  // Initialize a bombchu at the given position and angle
+  // Initialize a bombchu dropped with the given position and angle.
   Bombchu(Collision* col, Vec3f pos, u16 angle);
 
   // Update the bombchu for one frame, returning false if it should explode
-  // prematurely
+  // prematurely.
   bool move();
 
  private:

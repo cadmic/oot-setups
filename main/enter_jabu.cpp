@@ -22,8 +22,8 @@ bool simulateChu(Collision* col, f32 x, f32 z, u16 angle, bool debug,
 
   Bombchu chu(col, pos, angle);
 
-  // Start frame 2 to simulate instant chu drop
-  for (int i = 2; i < 120; i++) {
+  // Start frame 3 to simulate instant chu drop
+  for (int i = 3; i < 120; i++) {
     if (debug) {
       printf(
           "i=%3i x=%.9g y=%.9g z=%.9g x_raw=%08x y_raw=%08x z_raw=%08x "

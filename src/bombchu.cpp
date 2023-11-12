@@ -1,5 +1,6 @@
 #include "bombchu.hpp"
 
+#include "actor.hpp"
 #include "sys_math.hpp"
 #include "sys_math3d.hpp"
 #include "sys_matrix.hpp"
@@ -20,6 +21,8 @@ Bombchu::Bombchu(Collision* col, Vec3f pos, u16 angle) {
   } else {
     this->floorPoly = NULL;
   }
+
+  this->pos = translate(this->pos, this->rot, 8.0f);
 }
 
 void Bombchu::updateFloorPoly(CollisionPoly* poly) {
@@ -114,10 +117,6 @@ bool Bombchu::move() {
     this->updateFloorPoly(newFloorPoly);
   }
 
-  f32 speedXZ = Math_CosS(rot.x) * speed;
-  Vec3f velocity = {Math_SinS(rot.y) * speedXZ, Math_SinS(rot.x) * speed,
-                    Math_CosS(rot.y) * speedXZ};
-  this->pos = this->pos + velocity * 1.5f;
-
+  this->pos = translate(this->pos, this->rot, speed);
   return true;
 }
