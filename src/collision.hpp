@@ -62,15 +62,14 @@ void CollisionPoly_GetVertices(CollisionPoly* poly, Vec3s* vtxList,
 Vec3f CollisionPoly_GetNormalF(CollisionPoly* poly);
 
 struct Dyna {
+  CollisionHeader* header;
   f32 minY;
   f32 maxY;
   std::vector<Vec3s> vertices;
-  std::vector<CollisionPoly> walls;
-  std::vector<CollisionPoly> floors;
-  std::vector<CollisionPoly> ceilings;
-
-  CollisionHeader* header;
-  Vec3s* vtxList;
+  std::vector<CollisionPoly> polys;
+  std::vector<CollisionPoly*> walls;
+  std::vector<CollisionPoly*> floors;
+  std::vector<CollisionPoly*> ceilings;
 };
 
 // Simulates z_bgcheck.c for a subset of collision polygons.
@@ -95,7 +94,7 @@ struct Collision {
   void printPolys();
 
   // Add a poly
-  void addPoly(int polyId);
+  void addPoly(int polyIndex);
 
   void addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot, Vec3f pos);
 

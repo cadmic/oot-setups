@@ -125,19 +125,19 @@ bool BgCheck_CheckLineAgainstList(Collision* col,
 }
 
 bool BgCheck_CheckLineAgainstDynaList(Collision* col, Dyna* dyna,
-                                      std::vector<CollisionPoly>* polys,
+                                      std::vector<CollisionPoly*>* polys,
                                       Vec3f posA, Vec3f* posB, f32* minDistSq,
                                       CollisionPoly** outPoly) {
   bool result = false;
-  for (CollisionPoly& poly : *polys) {
+  for (CollisionPoly* poly : *polys) {
     Vec3f polyIntersect;
-    if (CollisionPoly_LineVsPoly(&poly, dyna->vertices.data(), posA, *posB,
+    if (CollisionPoly_LineVsPoly(poly, dyna->vertices.data(), posA, *posB,
                                  &polyIntersect)) {
       f32 distSq = Math3D_Vec3fDistSq(&posA, &polyIntersect);
       if (distSq < *minDistSq) {
         *minDistSq = distSq;
         *posB = polyIntersect;
-        *outPoly = &poly;
+        *outPoly = poly;
         result = true;
       }
     }
@@ -335,8 +335,7 @@ bool BgCheck_SphVsDynaWall(Collision* col, Vec3f pos, f32 radius, f32* x,
       continue;
     }
 
-    for (CollisionPoly& wall : dyna.walls) {
-      CollisionPoly* poly = &wall;
+    for (CollisionPoly* poly : dyna.walls) {
       Vec3f polyVerts[3];
       CollisionPoly_GetVertices(poly, dyna.vertices.data(), polyVerts);
 
@@ -388,8 +387,7 @@ bool BgCheck_SphVsDynaWall(Collision* col, Vec3f pos, f32 radius, f32* x,
       }
     }
 
-    for (CollisionPoly& wall : dyna.walls) {
-      CollisionPoly* poly = &wall;
+    for (CollisionPoly* poly : dyna.walls) {
       Vec3f polyVerts[3];
       CollisionPoly_GetVertices(poly, dyna.vertices.data(), polyVerts);
 
@@ -608,22 +606,22 @@ bool BgCheck_RaycastDownStatic(Collision* col, Vec3f pos, f32* floorHeight,
 }
 
 bool BgCheck_RaycastDownDynaList(Collision* col, Dyna* dyna,
-                                 std::vector<CollisionPoly>* polys, Vec3f pos,
+                                 std::vector<CollisionPoly*>* polys, Vec3f pos,
                                  f32* floorHeight, CollisionPoly** floorPoly) {
   bool result = false;
-  for (CollisionPoly& poly : *polys) {
+  for (CollisionPoly* poly : *polys) {
     Vec3f polyVerts[3];
-    CollisionPoly_GetVertices(&poly, dyna->vertices.data(), polyVerts);
-    Vec3f normal = CollisionPoly_GetNormalF(&poly);
+    CollisionPoly_GetVertices(poly, dyna->vertices.data(), polyVerts);
+    Vec3f normal = CollisionPoly_GetNormalF(poly);
 
     f32 yIntersect;
     if (Math3D_TriChkPointParaYIntersectDist(
             &polyVerts[0], &polyVerts[1], &polyVerts[2], normal.x, normal.y,
-            normal.z, (s16)poly.dist, pos.z, pos.x, &yIntersect, 1.0f) &&
+            normal.z, (s16)poly->dist, pos.z, pos.x, &yIntersect, 1.0f) &&
         yIntersect < pos.y && *floorHeight < yIntersect) {
       result = true;
       *floorHeight = yIntersect;
-      *floorPoly = &poly;
+      *floorPoly = poly;
     }
   }
   return result;
@@ -697,58 +695,60 @@ Collision::Collision(CollisionHeader* header, PlayerAge age, Vec3f min,
   }
 }
 
-void printPoly(CollisionPoly* poly, Vec3s* vtxList) {
+void printPoly(CollisionPoly* poly, Vec3s* vtxList, int index) {
   Vec3f v[3];
   CollisionPoly_GetVertices(poly, vtxList, v);
   Vec3f normal = CollisionPoly_GetNormalF(poly);
   s16 dist = poly->dist;
   f32 actualDist = -DOTXYZ(normal, v[0]);
   printf(
-      "    v1=(%.0f, %.0f, %.0f) v2=(%.0f, %.0f, %.0f) v3=(%.0f, %.0f, %.0f) "
-      "nx=%.4f ny=%.4f nz=%.4f dist=%d actualDist=%.9g\n",
-      v[0].x, v[0].y, v[0].z, v[1].x, v[1].y, v[1].z, v[2].x, v[2].y, v[2].z,
-      normal.x, normal.y, normal.z, dist, actualDist);
+      "    index=%d v1=(%.0f, %.0f, %.0f) v2=(%.0f, %.0f, %.0f) v3=(%.0f, "
+      "%.0f, %.0f) nx=%04x (%.4f) ny=%04x (%.4f) nz=%04x (%.4f) dist=%d "
+      "actualDist=%.9g\n",
+      index, v[0].x, v[0].y, v[0].z, v[1].x, v[1].y, v[1].z, v[2].x, v[2].y,
+      v[2].z, poly->nx, normal.x, poly->ny, normal.y, poly->nz, normal.z, dist,
+      actualDist);
 }
 
 void Collision::printPolys() {
   printf("scene collision:\n");
   printf("  walls:\n");
   for (CollisionPoly* poly : this->walls) {
-    printPoly(poly, this->vtxList);
+    printPoly(poly, this->vtxList, poly - this->polyList);
   }
 
   printf("  floors:\n");
   for (CollisionPoly* poly : this->floors) {
-    printPoly(poly, this->vtxList);
+    printPoly(poly, this->vtxList, poly - this->polyList);
   }
 
   printf("  ceilings:\n");
   for (CollisionPoly* poly : this->ceilings) {
-    printPoly(poly, this->vtxList);
+    printPoly(poly, this->vtxList, poly - this->polyList);
   }
 
   for (int i = 0; i < this->dynas.size(); i++) {
     Dyna* dyna = &this->dynas[i];
     printf("dyna %d:\n", i);
     printf("  walls:\n");
-    for (CollisionPoly& poly : dyna->walls) {
-      printPoly(&poly, dyna->vertices.data());
+    for (CollisionPoly* poly : dyna->walls) {
+      printPoly(poly, dyna->vertices.data(), poly - dyna->polys.data());
     }
 
     printf("  floors:\n");
-    for (CollisionPoly& poly : dyna->floors) {
-      printPoly(&poly, dyna->vertices.data());
+    for (CollisionPoly* poly : dyna->floors) {
+      printPoly(poly, dyna->vertices.data(), poly - dyna->polys.data());
     }
 
     printf("  ceilings:\n");
-    for (CollisionPoly& poly : dyna->ceilings) {
-      printPoly(&poly, dyna->vertices.data());
+    for (CollisionPoly* poly : dyna->ceilings) {
+      printPoly(poly, dyna->vertices.data(), poly - dyna->polys.data());
     }
   }
 }
 
-void Collision::addPoly(int polyId) {
-  CollisionPoly* poly = &this->polyList[polyId];
+void Collision::addPoly(int polyIndex) {
+  CollisionPoly* poly = &this->polyList[polyIndex];
 
   if ((s16)poly->ny > (s16)(0.5f * SHT_MAX)) {
     this->floors.push_back(poly);
@@ -761,60 +761,60 @@ void Collision::addPoly(int polyId) {
 
 void Collision::addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot,
                             Vec3f pos) {
-  Dyna dyna;
+  this->dynas.push_back(Dyna());
+  Dyna* dyna = &this->dynas.back();
+  dyna->header = header;
+  dyna->vertices.reserve(header->numVertices);
+  dyna->polys.reserve(header->numPolys);
 
   MtxF mtx;
   SkinMatrix_SetTranslateRotateYXZScale(&mtx, scale.x, scale.y, scale.z, rot.x,
                                         rot.y, rot.z, pos.x, pos.y, pos.z);
 
-  dyna.minY = 1.0e38f;
-  dyna.maxY = -1.0e38f;
+  dyna->minY = 1.0e38f;
+  dyna->maxY = -1.0e38f;
 
   for (int i = 0; i < header->numVertices; i++) {
     Vec3f vtx = Vec3f(header->vertices[i]);
     Vec3f vtxT;  // Vtx after mtx transform
     SkinMatrix_Vec3fMtxFMultXYZ(&mtx, &vtx, &vtxT);
 
-    dyna.minY = std::min(dyna.minY, vtxT.y);
-    dyna.maxY = std::max(dyna.maxY, vtxT.y);
+    dyna->minY = std::min(dyna->minY, vtxT.y);
+    dyna->maxY = std::max(dyna->maxY, vtxT.y);
 
-    dyna.vertices.push_back(vtxT.toVec3s());
+    dyna->vertices.push_back(vtxT.toVec3s());
   }
 
   for (int i = 0; i < header->numPolys; i++) {
-    CollisionPoly newPoly = header->polys[i];
+    dyna->polys.push_back(header->polys[i]);
+    CollisionPoly* poly = &dyna->polys.back();
 
     Vec3f polyVerts[3];
-    CollisionPoly_GetVertices(&header->polys[i], dyna.vertices.data(),
-                              polyVerts);
+    CollisionPoly_GetVertices(poly, dyna->vertices.data(), polyVerts);
 
-    Vec3f newNormal;
-    Math3D_SurfaceNorm(&polyVerts[0], &polyVerts[1], &polyVerts[2], &newNormal);
-    f32 newNormMagnitude = Math3D_Vec3fMagnitude(&newNormal);
+    Vec3f normal;
+    Math3D_SurfaceNorm(&polyVerts[0], &polyVerts[1], &polyVerts[2], &normal);
+    f32 normMagnitude = Math3D_Vec3fMagnitude(&normal);
 
-    if (!IS_ZERO(newNormMagnitude)) {
-      newNormal = newNormal * (1.0f / newNormMagnitude);
-      newPoly.nx = (s16)(newNormal.x * SHT_MAX);
-      newPoly.ny = (s16)(newNormal.y * SHT_MAX);
-      newPoly.nz = (s16)(newNormal.z * SHT_MAX);
+    if (!IS_ZERO(normMagnitude)) {
+      normal = normal * (1.0f / normMagnitude);
+      poly->nx = (s16)(normal.x * SHT_MAX);
+      poly->ny = (s16)(normal.y * SHT_MAX);
+      poly->nz = (s16)(normal.z * SHT_MAX);
     }
 
-    newPoly.dist = -DOTXYZ(newNormal, polyVerts[0]);
-    if (newNormal.y > 0.5f) {
-      dyna.floors.push_back(newPoly);
-    } else if (newNormal.y < -0.8f) {
-      dyna.ceilings.push_back(newPoly);
+    poly->dist = -DOTXYZ(normal, polyVerts[0]);
+    if (normal.y > 0.5f) {
+      dyna->floors.push_back(poly);
+    } else if (normal.y < -0.8f) {
+      dyna->ceilings.push_back(poly);
     } else {
-      dyna.walls.push_back(newPoly);
+      dyna->walls.push_back(poly);
     }
   }
-  std::reverse(dyna.floors.begin(), dyna.floors.end());
-  std::reverse(dyna.ceilings.begin(), dyna.ceilings.end());
-  std::reverse(dyna.walls.begin(), dyna.walls.end());
-
-  dyna.header = header;
-  dyna.vtxList = header->vertices;
-  this->dynas.push_back(dyna);
+  std::reverse(dyna->floors.begin(), dyna->floors.end());
+  std::reverse(dyna->ceilings.begin(), dyna->ceilings.end());
+  std::reverse(dyna->walls.begin(), dyna->walls.end());
 }
 
 Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
