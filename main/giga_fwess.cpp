@@ -134,6 +134,94 @@ void findFwesses(Collision* col) {
   }
 }
 
+int subtractDeadZone(int x) {
+  if (x > 7) {
+    return std::min(x - 7, 60);
+  } else if (x < -7) {
+    return std::max(x + 7, -60);
+  } else {
+    return 0;
+  }
+}
+
+u16 controlStickAngle(int x, int y) {
+  int relX = subtractDeadZone(x);
+  int relY = subtractDeadZone(y);
+  return Math_Atan2S(relY, -relX);
+}
+
+enum SpeedMode { SPEED_MODE_CURVED, SPEED_MODE_LINEAR };
+
+f32 controlStickSpeed(int x, int y, s16 floorPitch, SpeedMode speedMode) {
+  f32 relX = subtractDeadZone(x);
+  f32 relY = subtractDeadZone(y);
+  f32 magnitude = std::min(sqrtf(SQ(relX) + SQ(relY)), 60.0f);
+
+  f32 speedTarget = magnitude;
+  switch (speedMode) {
+    case SPEED_MODE_CURVED:
+      speedTarget -= 20.0f;
+
+      if (speedTarget < 0.0f) {
+        speedTarget = 0.0f;
+      } else {
+        f32 t = 1.0f - Math_CosS(speedTarget * 450.0f);
+        speedTarget = (SQ(t) * 30.0f) + 7.0f;
+      }
+      break;
+    case SPEED_MODE_LINEAR:
+      speedTarget *= 0.8f;
+      break;
+  }
+
+  if (magnitude != 0.0f) {
+    f32 sinFloorPitch = Math_SinS(floorPitch);
+    f32 floorPitchInfluence = std::min(std::max(sinFloorPitch, 0.0f), 0.6f);
+
+    // TODO: speedCap and unk_6C4
+
+    speedTarget =
+        speedTarget * 0.14f - 8.0f * floorPitchInfluence * floorPitchInfluence;
+    speedTarget = std::max(speedTarget, 0.0f);
+  }
+
+  return speedTarget;
+}
+
+f32 slopeFloorPitch(u16 angle) {
+  f32 nx = (s16)0xe995 * (1.0f / SHT_MAX);
+  f32 ny = (s16)0x5551 * (1.0f / SHT_MAX);
+  f32 nz = (s16)0x5cbe * (1.0f / SHT_MAX);
+
+  f32 sin = Math_SinS(angle);
+  f32 cos = Math_CosS(angle);
+
+  return Math_Atan2S(1.0f, (-(nx * sin) - (nz * cos)) * (1.0f / ny));
+}
+
+void printControlStick(u16 angle) {
+  f32 sidehopFloorPitch = slopeFloorPitch(angle - 0x4000);
+  f32 essFloorPitch = slopeFloorPitch(angle);
+
+  for (int x = -67; x <= 67; x++) {
+    for (int y = -67; y <= 67; y++) {
+      u16 angle = controlStickAngle(x, y);
+      f32 waterSpeed =
+          controlStickSpeed(x, y, sidehopFloorPitch, SPEED_MODE_LINEAR);
+      f32 slopeEssSpeed =
+          controlStickSpeed(x, y, essFloorPitch, SPEED_MODE_CURVED);
+      f32 flatEssSpeed = controlStickSpeed(x, y, 0x000, SPEED_MODE_CURVED);
+
+      bool water = angle > 0x6000 && angle < 0xa000 && waterSpeed != 0.0f;
+      bool slopeEss = slopeEssSpeed == 0.0f;
+      bool flatEss = flatEssSpeed == 0.0f;
+
+      printf("x=%d y=%d water=%d slopeEss=%d flatEss=%d\n", x, y, water,
+             slopeEss, flatEss);
+    }
+  }
+}
+
 int main(int argc, char* argv[]) {
   Collision col(&spot00_sceneCollisionHeader_008464, PLAYER_AGE_CHILD,
                 {3530, 100, 1830}, {3670, 200, 1960});
@@ -159,7 +247,9 @@ int main(int argc, char* argv[]) {
 
   // simulateFwess(&col, {3480.0f, 117.15f, 1930.59f}, 0xa0c0, 0x0000, true);
 
-  findFwesses(&col);
+  // findFwesses(&col);
+
+  printControlStick(0xa200);
 
   return 0;
 }
