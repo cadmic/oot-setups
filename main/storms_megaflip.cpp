@@ -220,7 +220,7 @@ std::vector<Action> addlActions = {
     TURN_RIGHT,
 };
 
-u64 tested = 0;
+unsigned long long tested = 0;
 int close = 0;
 int found = 0;
 int maxCost = 66;

@@ -188,7 +188,7 @@ bool simulateWalk(f32 x, f32 z, u16 walkAngle, u16 throwAngle, u16 cameraAngle,
 void findZRange(f32 x, u16 angle) {
   bool found = false;
   printf("angle=%04x x=%.9g (%08x)\n", angle, x, floatToInt(x));
-  for (int zi = floatToInt(-290.0f); zi <= floatToInt(-300.0f); zi++) {
+  for (u32 zi = floatToInt(-290.0f); zi <= floatToInt(-300.0f); zi++) {
     f32 z = intToFloat(zi);
     if (simulateWalk(x, z, angle, angle, angle, false)) {
       if (!found) {
@@ -324,8 +324,8 @@ bool inOpenArea(Vec3f pos) {
 
 Vec3f rockPos = {-292, 0, -350};
 
-u64 tested = 0;
-u64 found = 0;
+unsigned long long tested = 0;
+unsigned long long found = 0;
 
 void testSetup(std::vector<Crumb>* path, int runningCost, Vec3f pos) {
   if (tested % 10000 == 0) {

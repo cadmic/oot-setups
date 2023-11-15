@@ -1,3 +1,5 @@
+#include <tuple>
+
 #include "actor.hpp"
 #include "animation.hpp"
 #include "animation_data.hpp"
@@ -625,7 +627,7 @@ std::vector<Action> addlActions = {
     TURN_RIGHT,
 };
 
-u64 tested = 0;
+unsigned long long tested = 0;
 int close = 0;
 int found = 0;
 

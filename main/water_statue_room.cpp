@@ -181,7 +181,7 @@ bool testMegaflip(Vec3f pos, u16 angle, bool debug) {
 }
 
 void findMegaflips() {
-  u64 tested = 0;
+  unsigned long long tested = 0;
   int found = 0;
   for (u16 angle = 0x0000; angle <= 0x1000; angle += 0x8) {
     for (f32 x = -3061; x < -3000; x += 0.1f) {

@@ -92,6 +92,8 @@ int actionCost(Action action) {
     case TURN_DOWN:
       return 8;
   }
+
+  return 0;
 }
 
 int actionsCost(const std::vector<Action>& actions) {

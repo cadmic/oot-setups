@@ -1,6 +1,6 @@
-CXX := clang++
+CXX := g++
 # TODO: add easy debug mode
-CFLAGS := -Isrc -Wall -std=c++17 -g -O3 -flto
+CFLAGS := -Isrc -Wall -Wno-sign-compare -std=c++17 -g -O3 -flto
 
 HEADERS := $(wildcard src/*.hpp)
 SRC_OBJECTS := $(patsubst %.cpp, %.o, $(wildcard src/*.cpp))

@@ -152,8 +152,8 @@ Vec3f highestPoint(Vec3f v, Vec3f normal, f32 dist) {
   u32 zstart =
       std::min(floatToInt(approx.z - step), floatToInt(approx.z + step));
   u32 zend = std::max(floatToInt(approx.z - step), floatToInt(approx.z + step));
-  for (int xi = xstart; xi <= xend; xi++) {
-    for (int zi = zstart; zi <= zend; zi++) {
+  for (u32 xi = xstart; xi <= xend; xi++) {
+    for (u32 zi = zstart; zi <= zend; zi++) {
       f32 x = intToFloat(xi);
       f32 z = intToFloat(zi);
       if (SQ(v.z - z) + SQ(v.x - x) < SQ(1.0f)) {
