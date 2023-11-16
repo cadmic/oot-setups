@@ -1,5 +1,6 @@
 #include "actor.hpp"
 #include "camera.hpp"
+#include "collider.hpp"
 #include "collision_data.hpp"
 #include "global.hpp"
 #include "pos_angle_setup.hpp"
@@ -9,30 +10,6 @@ Vec3f instantBombOffset = {-8.56731033f, 0.0f, 3.83789444f};
 
 Vec3s dropBomb(Vec3f pos, u16 angle) {
   return (pos + rotate(instantBombOffset, angle)).toVec3s();
-}
-
-Vec3f bombPushDisplacement(Vec3f linkPos, Vec3s bombPosTrunc) {
-  Vec3s linkPosTrunc = linkPos.toVec3s();
-
-  f32 xDelta = linkPosTrunc.x - bombPosTrunc.x;
-  f32 zDelta = linkPosTrunc.z - bombPosTrunc.z;
-
-  f32 xzDist = sqrtf(SQ(xDelta) + SQ(zDelta));
-  f32 overlap = 18 - xzDist;
-
-  if (overlap <= 0) {
-    return Vec3f();
-  }
-
-  f32 dispRatio = 0.8f;
-
-  if (xzDist != 0.0f) {
-    xDelta *= overlap / xzDist;
-    zDelta *= overlap / xzDist;
-    return Vec3f(xDelta * dispRatio, 0, zDelta * dispRatio);
-  } else {
-    return Vec3f(-overlap * dispRatio, 0, 0);
-  }
 }
 
 bool simulateRecoil(Vec3f pos, u16 angle, Vec3s bomb1Pos, Vec3s bomb2Pos,
@@ -54,9 +31,8 @@ bool simulateRecoil(Vec3f pos, u16 angle, Vec3s bomb1Pos, Vec3s bomb2Pos,
   }
 
   // hammer recoil + bomb push
-  Vec3f displacement = bombPushDisplacement(pos, bomb1Pos) +
-                       bombPushDisplacement(pos, bomb2Pos) +
-                       bombPushDisplacement(pos, bomb3Pos);
+  Vec3f displacement = bombPush(pos, bomb1Pos) + bombPush(pos, bomb2Pos) +
+                       bombPush(pos, bomb3Pos);
   pos = translate(pos, angle, -10.0f, 0.0f, displacement);
 
   if (debug) {

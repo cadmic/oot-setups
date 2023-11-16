@@ -4,6 +4,7 @@
 #include "animation.hpp"
 #include "animation_data.hpp"
 #include "camera.hpp"
+#include "collider.hpp"
 #include "collision_data.hpp"
 #include "global.hpp"
 #include "pos_angle_setup.hpp"
@@ -20,31 +21,6 @@ Vec3f dropBomb(Vec3f pos, u16 angle, bool instant, bool swordInHand) {
   return pullPos;
 }
 
-// TODO: move somewhere common
-Vec3f bombPushDisplacement(Vec3f linkPos, Vec3s bombPosTrunc) {
-  Vec3s linkPosTrunc = linkPos.toVec3s();
-
-  f32 xDelta = linkPosTrunc.x - bombPosTrunc.x;
-  f32 zDelta = linkPosTrunc.z - bombPosTrunc.z;
-
-  f32 xzDist = sqrtf(SQ(xDelta) + SQ(zDelta));
-  f32 overlap = 18 - xzDist;
-
-  if (overlap <= 0) {
-    return Vec3f();
-  }
-
-  f32 dispRatio = 0.8f;
-
-  if (xzDist != 0.0f) {
-    xDelta *= overlap / xzDist;
-    zDelta *= overlap / xzDist;
-    return Vec3f(xDelta * dispRatio, 0, zDelta * dispRatio);
-  } else {
-    return Vec3f(-overlap * dispRatio, 0, 0);
-  }
-}
-
 bool simulateDoorOpen(Vec3f pos, u16 angle, Vec3s bombPos, bool debug) {
   // ensure can open door
   // door pos: (119, -3010)
@@ -54,7 +30,7 @@ bool simulateDoorOpen(Vec3f pos, u16 angle, Vec3s bombPos, bool debug) {
   }
 
   // hess speed + bomb push
-  Vec3f displacement = bombPushDisplacement(pos, bombPos) * 2;
+  Vec3f displacement = bombPush(pos, bombPos) * 2;
   pos = translate(pos, angle, -18.0f, 0.0f, displacement);
 
   if (debug) {

@@ -1,34 +1,16 @@
 #include "actor.hpp"
 #include "camera_angles.hpp"
+#include "collider.hpp"
 #include "collision_data.hpp"
 #include "pos_angle_setup.hpp"
 #include "sys_math.hpp"
 
-Vec3f calculatePush(Vec3f pos) {
-  Vec3s linkPos = pos.toVec3s();
-  Vec3s switchPos = {-3160, 760, -540};
-
-  f32 xDelta = linkPos.x - switchPos.x;
-  f32 zDelta = linkPos.z - switchPos.z;
-
-  f32 xzDist = sqrtf(SQ(xDelta) + SQ(zDelta));
-  f32 overlap = 32 - xzDist;
-
-  if (overlap <= 0) {
-    return Vec3f();
-  }
-
-  if (xzDist != 0.0f) {
-    xDelta *= overlap / xzDist;
-    zDelta *= overlap / xzDist;
-    return Vec3f(xDelta, 0, zDelta);
-  } else {
-    return Vec3f(-overlap, 0, 0);
-  }
-}
+Vec3f switchPos = {-3160, 760, -540};
+s16 switchRadius = 20;
 
 Vec3f translateWithPush(Vec3f pos, u16 angle, f32 xzSpeed, f32 ySpeed) {
-  return translate(pos, angle, xzSpeed, ySpeed, calculatePush(pos));
+  return translate(pos, angle, xzSpeed, ySpeed,
+                   immovablePush(pos, switchPos, switchRadius));
 }
 
 bool onPlatform(Vec3f pos) {

@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "actor.hpp"
+#include "collider.hpp"
 #include "collision_data.hpp"
 #include "global.hpp"
 #include "pos_angle_setup.hpp"
@@ -188,31 +189,6 @@ void findClipRegion() {
   }
 }
 
-Vec3f bombPushDisplacement(Vec3f linkPos, Vec3f bombPos) {
-  Vec3s linkPosTrunc = linkPos.toVec3s();
-  Vec3f bombPosTrunc = bombPos.toVec3s();
-
-  f32 xDelta = linkPosTrunc.x - bombPosTrunc.x;
-  f32 zDelta = linkPosTrunc.z - bombPosTrunc.z;
-
-  f32 xzDist = sqrtf(SQ(xDelta) + SQ(zDelta));
-  f32 overlap = 18 - xzDist;
-
-  if (overlap <= 0) {
-    return Vec3f();
-  }
-
-  f32 dispRatio = 0.8f;
-
-  if (xzDist != 0.0f) {
-    xDelta *= overlap / xzDist;
-    zDelta *= overlap / xzDist;
-    return Vec3f(xDelta * dispRatio, 0, zDelta * dispRatio);
-  } else {
-    return Vec3f(-overlap * dispRatio, 0, 0);
-  }
-}
-
 #define BOMB_SETUPS               \
   X(SETUP_ROLL_BACKFLIP)          \
   X(SETUP_ROLL_BACKFLIP_INSTANT)  \
@@ -246,7 +222,7 @@ bool testSuperslide(Collision* col, Vec3f startPos, u16 angle,
   PosAngleSetup setup(col, startPos, angle, {-10000, -10000, -10000},
                       {10000, 10000, 10000});
 
-  bool bombPush = false;
+  bool useBombPush = false;
   Vec3f bombPos;
   switch (bombSetup) {
     case SETUP_ROLL_BACKFLIP:
@@ -257,13 +233,13 @@ bool testSuperslide(Collision* col, Vec3f startPos, u16 angle,
       setup.performAction(ROLL);
       setup.performAction(BACKFLIP);
       bombPos = setup.pos + rotate(instantBombOffset, angle);
-      bombPush = true;
+      useBombPush = true;
       break;
     case SETUP_ROLL_BACKFLIP_OVERHEAD:
       setup.performAction(ROLL);
       setup.performAction(BACKFLIP);
       bombPos = setup.pos + rotate(overheadBombOffset, angle);
-      bombPush = true;
+      useBombPush = true;
       break;
     case SETUP_BACKFLIP_ROLL:
       setup.performAction(BACKFLIP);
@@ -273,25 +249,25 @@ bool testSuperslide(Collision* col, Vec3f startPos, u16 angle,
       setup.performAction(BACKFLIP);
       bombPos = setup.pos + rotate(instantBombOffset, angle);
       setup.performAction(ROLL);
-      bombPush = true;
+      useBombPush = true;
       break;
     case SETUP_BACKFLIP_OVERHEAD_ROLL:
       setup.performAction(BACKFLIP);
       bombPos = setup.pos + rotate(overheadBombOffset, angle);
       setup.performAction(ROLL);
-      bombPush = true;
+      useBombPush = true;
       break;
     case SETUP_BACKFLIP_ROLL_INSTANT:
       setup.performAction(BACKFLIP);
       setup.performAction(ROLL);
       bombPos = setup.pos + rotate(instantBombOffset, angle);
-      bombPush = true;
+      useBombPush = true;
       break;
     case SETUP_BACKFLIP_ROLL_OVERHEAD:
       setup.performAction(BACKFLIP);
       setup.performAction(ROLL);
       bombPos = setup.pos + rotate(overheadBombOffset, angle);
-      bombPush = true;
+      useBombPush = true;
       break;
     case SETUP_BACKFLIP:
       setup.performAction(BACKFLIP);
@@ -299,12 +275,12 @@ bool testSuperslide(Collision* col, Vec3f startPos, u16 angle,
     case SETUP_BACKFLIP_INSTANT:
       setup.performAction(BACKFLIP);
       bombPos = setup.pos + rotate(instantBombOffset, angle);
-      bombPush = true;
+      useBombPush = true;
       break;
     case SETUP_BACKFLIP_OVERHEAD:
       setup.performAction(BACKFLIP);
       bombPos = setup.pos + rotate(overheadBombOffset, angle);
-      bombPush = true;
+      useBombPush = true;
       break;
     case BOMB_SETUPS_MAX:
       assert(false);
@@ -346,7 +322,7 @@ bool testSuperslide(Collision* col, Vec3f startPos, u16 angle,
       grabPos = move(col, grabPos, angle, rollSpeed);
 
       // If bomb push, make sure bomb push box activates
-      if (bombPush && Math_Vec3f_DistXZ(&grabPos, &bombPos) <= 20.0f) {
+      if (useBombPush && Math_Vec3f_DistXZ(&grabPos, &bombPos) <= 20.0f) {
         continue;
       }
 
@@ -384,8 +360,8 @@ bool testSuperslide(Collision* col, Vec3f startPos, u16 angle,
         }
 
         Vec3f intendedPos = translate(pos, angle, -18.0f, -5.0f);
-        if (bombPush) {
-          intendedPos = intendedPos + bombPushDisplacement(pos, bombPos);
+        if (useBombPush) {
+          intendedPos = intendedPos + bombPush(pos, bombPos);
         }
         pos = col->runChecks(pos, intendedPos);
 
