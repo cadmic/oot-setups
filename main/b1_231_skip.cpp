@@ -218,9 +218,7 @@ const char* bombSetupNames[] = {
 bool testSuperslide(Collision* col, Vec3f startPos, u16 angle,
                     BombSetup bombSetup, bool* outHoldUp, int* outGrabFrame,
                     int* outMinBombTimer, int* outMaxBombTimer, bool debug) {
-  // TODO: make bounds optional for PosAngleSetup?
-  PosAngleSetup setup(col, startPos, angle, {-10000, -10000, -10000},
-                      {10000, 10000, 10000});
+  PosAngleSetup setup(col, startPos, angle);
 
   bool useBombPush = false;
   Vec3f bombPos;
