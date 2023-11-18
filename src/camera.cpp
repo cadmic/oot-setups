@@ -5,7 +5,7 @@
 #include "sys_math.hpp"
 
 #define ABS std::abs
-#define CAM_DATA_SCALED(x) ((x)*0.01f)
+#define CAM_DATA_SCALED(x) ((x) * 0.01f)
 
 // a - b without implementation-defined overflow behavior
 s16 angleDiff(u16 a, u16 b) {
@@ -117,7 +117,7 @@ Vec3f* Camera_AddVecGeoToVec3f(Vec3f* dest, Vec3f* a, VecGeo* geo) {
   Vec3f sum;
   Vec3f b;
 
-  OLib_VecGeoToVec3f(&b, geo);
+  b = OLib_VecGeoToVec3f(geo);
 
   sum.x = a->x + b.x;
   sum.y = a->y + b.y;
@@ -130,8 +130,7 @@ Vec3f* Camera_AddVecGeoToVec3f(Vec3f* dest, Vec3f* a, VecGeo* geo) {
 
 bool Camera_BGCheckInfo(Camera* camera, Vec3f from, Vec3f to, Vec3f* result,
                         Vec3f* normal) {
-  VecGeo fromToOffset;
-  OLib_Vec3fDiffToVecGeo(&fromToOffset, &from, &to);
+  VecGeo fromToOffset = OLib_Vec3fDiffToVecGeo(&from, &to);
   fromToOffset.r += 8.0f;
 
   Vec3f toPoint;
@@ -146,8 +145,7 @@ bool Camera_BGCheckInfo(Camera* camera, Vec3f from, Vec3f to, Vec3f* result,
     return true;
   } else {
     // TODO: check floors
-    Vec3f fromToNorm;
-    OLib_Vec3fDistNormalize(&fromToNorm, &from, &to);
+    Vec3f fromToNorm = OLib_Vec3fDistNormalize(&from, &to);
     *normal = fromToNorm * -1.0f;
     *result = to + *normal;
     return false;
@@ -344,12 +342,10 @@ void Camera::initParallel(Vec3f pos, u16 angle, int setting) {
       .yaw = (s16)(angle - 0x7fff),
   };
 
-  Vec3f dir;
-  OLib_VecGeoToVec3f(&dir, &target);
+  Vec3f dir = OLib_VecGeoToVec3f(&target);
   this->eyeNext = this->at + dir;
 
-  Vec3f norm;
-  OLib_Vec3fDistNormalize(&norm, &this->at, &this->eyeNext);
+  Vec3f norm = OLib_Vec3fDistNormalize(&this->at, &this->eyeNext);
   this->eye = this->eyeNext - norm;
 
   this->xzSpeed = 0;
@@ -400,11 +396,9 @@ void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
     camera->normalRUpdateRateTimer--;
   }
 
-  VecGeo atEyeGeo;
-  OLib_Vec3fDiffToVecGeo(&atEyeGeo, &camera->at, &camera->eye);
+  VecGeo atEyeGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eye);
 
-  VecGeo atEyeNextGeo;
-  OLib_Vec3fDiffToVecGeo(&atEyeNextGeo, &camera->at, &camera->eyeNext);
+  VecGeo atEyeNextGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eyeNext);
 
   s16 slopePitchTarget =
       Camera_GetPitchAdjFromFloorHeightDiffs(camera, atEyeGeo.yaw - 0x7FFF);
@@ -416,8 +410,7 @@ void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
 
   Camera_CalcAtDefault(camera, yOffset);
 
-  VecGeo eyeAdjustment;
-  OLib_Vec3fDiffToVecGeo(&eyeAdjustment, &camera->at, &camera->eyeNext);
+  VecGeo eyeAdjustment = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eyeNext);
 
   Camera_ClampDist(camera, eyeAdjustment.r, distMin, distMax,
                    camera->normalRUpdateRateTimer);
@@ -462,8 +455,7 @@ void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
   // TODO: check both ways?
   if (Camera_BGCheckInfo(camera, camera->at, camera->eyeNext, &collisionPoint,
                          &collisionNormal)) {
-    VecGeo geoNorm;
-    OLib_Vec3fToVecGeo(&geoNorm, &collisionNormal);
+    VecGeo geoNorm = OLib_Vec3fToVecGeo(&collisionNormal);
     if (geoNorm.pitch >= 0x2EE1) {
       geoNorm.yaw = eyeAdjustment.yaw;
     }
@@ -511,11 +503,9 @@ void Camera_Parallel1(Camera* camera, Vec3f pos, u16 angle, int setting) {
     camera->parallelYawTarget = angle - 0x7FFF;
   }
 
-  VecGeo atEyeGeo;
-  OLib_Vec3fDiffToVecGeo(&atEyeGeo, &camera->at, &camera->eye);
+  VecGeo atEyeGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eye);
 
-  VecGeo atEyeNextGeo;
-  OLib_Vec3fDiffToVecGeo(&atEyeNextGeo, &camera->at, &camera->eyeNext);
+  VecGeo atEyeNextGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eyeNext);
 
   camera->rUpdateRateInv = Camera_LERPCeilF(20.0f, camera->rUpdateRateInv,
                                             camera->speedRatio * 0.5f, 0.1f);
@@ -542,7 +532,7 @@ void Camera_Parallel1(Camera* camera, Vec3f pos, u16 angle, int setting) {
   } else {
     camera->dist = Camera_LERPCeilF(distTarget, camera->dist,
                                     1.0f / camera->rUpdateRateInv, 2.0f);
-    OLib_Vec3fDiffToVecGeo(&eyeAdjustment, &camera->at, &camera->eyeNext);
+    eyeAdjustment = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eyeNext);
     eyeAdjustment.r = camera->dist;
     eyeAdjustment.yaw =
         Camera_LERPCeilS(camera->parallelYawTarget, atEyeNextGeo.yaw, 0.8f, 10);
@@ -603,7 +593,6 @@ void Camera::updateParallel(Vec3f pos, u16 angle, int setting) {
 }
 
 u16 Camera::yaw() {
-  VecGeo result;
-  OLib_Vec3fDiffToVecGeo(&result, &this->eye, &this->at);
+  VecGeo result = OLib_Vec3fDiffToVecGeo(&this->eye, &this->at);
   return result.yaw;
 }
