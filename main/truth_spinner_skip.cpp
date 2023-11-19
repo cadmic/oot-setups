@@ -1,5 +1,6 @@
 #include "actor.hpp"
 #include "collision_data.hpp"
+#include "search.hpp"
 #include "sys_math.hpp"
 
 extern CollisionHeader object_haka_objects_Col_00A938;
@@ -68,27 +69,27 @@ bool testClip(Collision* col, Vec3f pos, u16 angle, bool debug) {
 }
 
 void findClipRegion(Collision* col) {
-  int tested = 0;
-  int found = 0;
-  for (u16 angle = 0xaf00; angle < 0xc400; angle += 0x10) {
-    for (f32 x = 970.0f; x < 1006.0f; x += 0.5f) {
-      for (f32 z = -175.0f; z < 45.0f; z += 0.5f) {
-        if (tested % 1000 == 0) {
-          fprintf(stderr, "tested=%d found=%d angle=%04x x=%.1f z=%.1f ... \r",
-                  tested, found, angle, x, z);
-        }
-        tested++;
-
-        Vec3f pos = {x, -63.0f, z};
-        pos = translate(pos, angle + 0x8000, 6.0f, 4.8f);
-        if (testClip(col, pos, angle, false)) {
-          found++;
-          printf("angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n", angle, x,
-                 z, floatToInt(x), floatToInt(z));
-        }
-      }
+  PosAngleRange range = {
+      .angleMin = 0xaf00,
+      .angleMax = 0xc400,
+      .angleStep = 0x10,
+      .xMin = 970.0f,
+      .xMax = 1006.0f,
+      .xStep = 0.5f,
+      .zMin = -175.0f,
+      .zMax = 45.0f,
+      .zStep = 0.5f,
+  };
+  searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
+    Vec3f pos = {x, -63.0f, z};
+    pos = translate(pos, angle + 0x8000, 6.0f, 4.8f);
+    if (testClip(col, pos, angle, false)) {
+      printf("angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n", angle, x, z,
+             floatToInt(x), floatToInt(z));
+      return true;
     }
-  }
+    return false;
+  });
 }
 
 bool testSidehopSiderollMegaflip(Collision* col, f32 x, f32 z, u16 angle) {
@@ -116,24 +117,22 @@ bool testSidehopSiderollMegaflip(Collision* col, f32 x, f32 z, u16 angle) {
 }
 
 void findSidehopSiderollMegaflipRegion(Collision* col) {
-  int tested = 0;
-  int found = 0;
-  u16 angle = 0xc000;
-  for (f32 x = 880.0f; x < 920.0f; x += 0.1f) {
-    for (f32 z = 0.0f; z < 40.0f; z += 0.1f) {
-      if (tested % 1000 == 0) {
-        fprintf(stderr, "tested=%d found=%d angle=%04x x=%.1f z=%.1f ... \r",
-                tested, found, angle, x, z);
-      }
-      tested++;
-
-      if (testSidehopSiderollMegaflip(col, x, z, angle)) {
-        found++;
-        printf("angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n", angle, x, z,
-               floatToInt(x), floatToInt(z));
-      }
+  PosAngleRange range = {
+      .angleMin = 0xc000,
+      .angleMax = 0xc000,
+      .xMin = 880.0f,
+      .xMax = 920.0f,
+      .zMin = 0.0f,
+      .zMax = 40.0f,
+  };
+  searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
+    if (testSidehopSiderollMegaflip(col, x, z, angle)) {
+      printf("angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n", angle, x, z,
+             floatToInt(x), floatToInt(z));
+      return true;
     }
-  }
+    return false;
+  });
 }
 
 bool testBackflipSiderollMegaflip(Collision* col, f32 x, f32 z, u16 angle,
@@ -179,24 +178,22 @@ bool testBackflipSiderollMegaflip(Collision* col, f32 x, f32 z, u16 angle,
 }
 
 void findBackflipSiderollMegaflipRegion(Collision* col) {
-  int tested = 0;
-  int found = 0;
-  u16 angle = 0xc000;
-  for (f32 x = 870.0f; x < 890.0f; x += 0.1f) {
-    for (f32 z = -95.0f; z < -55.0f; z += 0.1f) {
-      if (tested % 1000 == 0) {
-        fprintf(stderr, "tested=%d found=%d angle=%04x x=%.1f z=%.1f ... \r",
-                tested, found, angle, x, z);
-      }
-      tested++;
-
-      if (testBackflipSiderollMegaflip(col, x, z, angle, false)) {
-        found++;
-        printf("angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n", angle, x, z,
-               floatToInt(x), floatToInt(z));
-      }
+  PosAngleRange range = {
+      .angleMin = 0xc000,
+      .angleMax = 0xc000,
+      .xMin = 870.0f,
+      .xMax = 890.0f,
+      .zMin = -95.0f,
+      .zMax = -55.0f,
+  };
+  searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
+    if (testBackflipSiderollMegaflip(col, x, z, angle, false)) {
+      printf("angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n", angle, x, z,
+             floatToInt(x), floatToInt(z));
+      return true;
     }
-  }
+    return false;
+  });
 }
 
 int main(int argc, char* argv[]) {

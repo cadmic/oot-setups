@@ -4,6 +4,7 @@
 #include "collision.hpp"
 #include "collision_data.hpp"
 #include "global.hpp"
+#include "search.hpp"
 #include "sys_math.hpp"
 #include "sys_math3d.hpp"
 #include "sys_matrix.hpp"
@@ -48,12 +49,12 @@ bool simulateChu(Collision* col, f32 x, f32 z, u16 angle, bool debug,
   return true;
 }
 
-void testPosition(Collision* col, f32 x, f32 z, u16 angle, bool debug) {
+bool testPosition(Collision* col, f32 x, f32 z, u16 angle, bool debug) {
   // Assume y=2
 
   Vec3f result;
   if (!simulateChu(col, x, z, angle, debug, &result)) {
-    return;
+    return false;
   }
   Vec3s explosionCenter = result.toVec3s();
 
@@ -83,7 +84,7 @@ void testPosition(Collision* col, f32 x, f32 z, u16 angle, bool debug) {
   }
 
   if (!stanceFound) {
-    return;
+    return false;
   }
 
   Vec3f megaShieldCorner = {-1308.555, 61.53977, 130.6067};  // for y=2
@@ -92,7 +93,7 @@ void testPosition(Collision* col, f32 x, f32 z, u16 angle, bool debug) {
   f32 overlapSize;
   if (Math3D_SphVsCylOverlap(&sphere, &linkCylinder, &overlapSize) ||
       Math3D_Vec3f_DistXYZ(&centerf, &megaShieldCorner) > 72.0f) {
-    return;
+    return false;
   }
 
   printf(
@@ -100,25 +101,23 @@ void testPosition(Collision* col, f32 x, f32 z, u16 angle, bool debug) {
       "sidehop=%d\n",
       x, z, floatToInt(x), floatToInt(z), explosionCenter.x, explosionCenter.z,
       stance, sidehopFrame);
+  return true;
 }
 
 void searchPositions(Collision* col, u16 angle) {
-  f32 zmin = 0;
-  f32 zmax = 90;
-  f32 xmin = -1470;
-  f32 xmax = -1380;
-  f32 step = 0.05f;
-  int i = 0;
-  for (f32 z = zmin; z < zmax; z += step) {
-    for (f32 x = xmin; x < xmax; x += step) {
-      if (i % 10000 == 0) {
-        fprintf(stderr, "z=%.2f ...\r", z);
-      }
-      i++;
-
-      testPosition(col, x, z, angle, false);
-    }
-  }
+  PosAngleRange range = {
+      .angleMin = angle,
+      .angleMax = angle,
+      .xMin = -1470,
+      .xMax = -1380,
+      .xStep = 0.05f,
+      .zMin = 0,
+      .zMax = 90,
+      .zStep = 0.05f,
+  };
+  searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
+    return testPosition(col, x, z, angle, false);
+  });
 }
 
 int main(int argc, char* argv[]) {

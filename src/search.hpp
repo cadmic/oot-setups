@@ -1,8 +1,85 @@
 #pragma once
 
+#include <cstdio>
 #include <ctime>
+#include <limits>
 
+#include "global.hpp"
 #include "pos_angle_setup.hpp"
+
+// To search an angle range spanning 0, use e.g. -0x2000 to 0x2000.
+struct PosAngleRange {
+  int angleMin = 0x0000;
+  int angleMax = 0x0000;
+  int angleStep = 0x10;
+  f32 xMin = 0.0f;
+  f32 xMax = 0.0f;
+  f32 xStep = 0.1f;
+  f32 zMin = 0.0f;
+  f32 zMax = 0.0f;
+  f32 zStep = 0.1f;
+};
+
+// Search a 2d position and angle space while printing status information to
+// stderr. The function `f` should have the signature `bool f(u16 angle, f32 x,
+// f32 z)`. It will be called for each point in the search space, and it should
+// return true if the search found an interesting result (used for status
+// printing only).
+template <typename F>
+void searchPosAngleRange(PosAngleRange range, F f) {
+  unsigned long long tested = 0;
+  unsigned long long found = 0;
+  int angleMinFound = std::numeric_limits<int>::max();
+  int angleMaxFound = std::numeric_limits<int>::lowest();
+  f32 xMinFound = std::numeric_limits<f32>::max();
+  f32 xMaxFound = std::numeric_limits<f32>::lowest();
+  f32 zMinFound = std::numeric_limits<f32>::max();
+  f32 zMaxFound = std::numeric_limits<f32>::lowest();
+  time_t lastPrint = time(nullptr);
+
+  for (int angle = range.angleMin; angle <= range.angleMax;
+       angle += range.angleStep) {
+    for (f32 x = range.xMin; x <= range.xMax; x += range.xStep) {
+      for (f32 z = range.zMin; z <= range.zMax; z += range.zStep) {
+        time_t now = time(nullptr);
+        if (now - lastPrint >= 1) {
+          lastPrint = now;
+          fprintf(stderr, "tested:%llu found:%llu angle:%04x x:%9.3f z:%9.3f",
+                  tested, found, (u16)angle, x, z);
+          if (found > 0) {
+            fprintf(stderr,
+                    " amin:%04x amax:%04x xmin:%9.3f"
+                    " xmax:%9.3f zmin:%9.3f zmax:%9.3f",
+                    (u16)angleMinFound, (u16)angleMaxFound, xMinFound,
+                    xMaxFound, zMinFound, zMaxFound);
+          }
+          fprintf(stderr, " ...\r");
+        }
+
+        tested++;
+        if (f(angle, x, z)) {
+          found++;
+          angleMinFound = std::min(angleMinFound, angle);
+          angleMaxFound = std::max(angleMaxFound, angle);
+          xMinFound = std::min(xMinFound, x);
+          xMaxFound = std::max(xMaxFound, x);
+          zMinFound = std::min(zMinFound, z);
+          zMaxFound = std::max(zMaxFound, z);
+        }
+      }
+    }
+  }
+
+  fprintf(stderr, "tested:%llu found:%llu", tested, found);
+  if (found > 0) {
+    fprintf(stderr,
+            " amin:%04x amax:%04x xmin:%9.3f"
+            " xmax:%9.3f zmin:%9.3f zmax:%9.3f",
+            (u16)angleMinFound, (u16)angleMaxFound, xMinFound, xMaxFound,
+            zMinFound, zMaxFound);
+  }
+  fprintf(stderr, "\n");
+}
 
 struct SearchParams {
   // Collision to use for setups.
@@ -207,7 +284,7 @@ void searchSetups(const SearchParams& params, Output output) {
   searchSetups(params, filter, output);
 }
 
-int numShards(const SearchParams& params, int depth) {
+inline int numShards(const SearchParams& params, int depth) {
   int numShards = params.starts.size();
   for (int i = 0; i < depth; i++) {
     numShards *= params.actions.size();
