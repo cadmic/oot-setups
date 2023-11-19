@@ -154,16 +154,15 @@ PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
       pos(initialPos),
       angle(initialAngle),
       floorPoly(NULL),
-      dynaId(-1) {}
+      dynaId(-1) {
+  this->col->findFloor({this->pos.x, this->pos.y + 50.0f, this->pos.z},
+                       &this->floorPoly, &this->dynaId);
+}
 
 PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
-    : col(col),
-      minBounds(Vec3f(-10000, -10000, -10000)),
-      maxBounds(Vec3f(10000, 10000, 10000)),
-      pos(initialPos),
-      angle(initialAngle),
-      floorPoly(NULL),
-      dynaId(-1) {}
+    : PosAngleSetup(col, initialPos, initialAngle,
+                    Vec3f(-10000, -10000, -10000), Vec3f(10000, 10000, 10000)) {
+}
 
 bool PosAngleSetup::essLeft(int n) {
   this->angle += n * 0x708;
@@ -177,13 +176,10 @@ bool PosAngleSetup::essRight(int n) {
 
 bool PosAngleSetup::cameraTurn(u16 offset) {
   if (!this->floorPoly) {
-    this->col->findFloor({this->pos.x, this->pos.y + 50.0f, this->pos.z},
-                         &this->floorPoly, &this->dynaId);
-    if (!this->floorPoly) {
-      return false;
-    }
+    return false;
   }
 
+  // TODO: cache camera angle somehow?
   int setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
   Camera camera(this->col);
   camera.initParallel(this->pos, this->angle, setting);
