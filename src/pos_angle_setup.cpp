@@ -184,23 +184,17 @@ bool PosAngleSetup::cameraTurn(u16 offset) {
     }
   }
 
-  // TODO: cache camera angle?
   int setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
   Camera camera(this->col);
   camera.initParallel(this->pos, this->angle, setting);
   camera.updateNormal(this->pos, this->angle, setting);
-  u16 cameraAngle = camera.yaw();
-  for (int i = 0; i < 5; i++) {
-    camera.updateNormal(this->pos, this->angle, setting);
-    u16 newCameraAngle = camera.yaw();
-    if (newCameraAngle == cameraAngle) {
-      this->angle = cameraAngle + offset;
-      return true;
-    }
-    cameraAngle = newCameraAngle;
-  }
 
-  return false;
+  // TODO: he camera might not be stable after only 1 frame of movement.
+  // Sometimes this makes turns unreliable, but sometimes it's fine because the
+  // camera angle only varies slightly. We need some principled way to determine
+  // whether the camera is stable.
+  this->angle = camera.yaw() + offset;
+  return true;
 }
 
 bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,

@@ -1,4 +1,5 @@
 #include "actor.hpp"
+#include "camera.hpp"
 #include "collision_data.hpp"
 #include "pos_angle_setup.hpp"
 #include "sys_math.hpp"
@@ -289,6 +290,25 @@ bool isEssAction(Action action) {
   }
 }
 
+bool cameraTurn(PosAngleSetup* setup, u16 offset) {
+  int setting = 3;
+  Camera camera(setup->col);
+  camera.initParallel(setup->pos, setup->angle, setting);
+  camera.updateNormal(setup->pos, setup->angle, setting);
+  u16 cameraAngle = camera.yaw();
+  for (int i = 0; i < 5; i++) {
+    camera.updateNormal(setup->pos, setup->angle, setting);
+    u16 newCameraAngle = camera.yaw();
+    if (newCameraAngle == cameraAngle) {
+      setup->angle = cameraAngle + offset;
+      return true;
+    }
+    cameraAngle = newCameraAngle;
+  }
+
+  return false;
+}
+
 void search(Collision* corridorCol, const PosAngleSetup& setup,
             std::vector<Action>* actions, int prefixCost, int suffixCost) {
   int k = actions->size();
@@ -344,9 +364,30 @@ void search(Collision* corridorCol, const PosAngleSetup& setup,
     }
 
     PosAngleSetup newSetup(setup);
-    if (!newSetup.performAction(action)) {
-      continue;
+
+    switch (action) {
+      case TURN_LEFT:
+        if (!cameraTurn(&newSetup, 0x4000)) {
+          continue;
+        }
+        break;
+      case TURN_DOWN:
+        if (!cameraTurn(&newSetup, 0x8000)) {
+          continue;
+        }
+        break;
+      case TURN_RIGHT:
+        if (!cameraTurn(&newSetup, 0xc000)) {
+          continue;
+        }
+        break;
+      default:
+        if (!newSetup.performAction(action)) {
+          continue;
+        }
+        break;
     }
+
     if (newSetup.pos == setup.pos && newSetup.angle == setup.angle) {
       continue;
     }
