@@ -31,3 +31,14 @@ Vec3f immovablePush(Vec3f linkPos, Vec3f objectPos, s16 objectRadius) {
   return calculatePush(linkPos.toVec3s(), objectPos.toVec3s(), objectRadius,
                        1.0f);
 }
+
+bool colliderSphVsQuad(Sphere16* sph, Vec3f* quad) {
+  TriNorm tri1;
+  TriNorm tri2;
+  Vec3f hitPos;
+
+  Math3D_TriNorm(&tri1, &quad[2], &quad[3], &quad[1]);
+  Math3D_TriNorm(&tri2, &quad[1], &quad[0], &quad[2]);
+  return Math3D_TriVsSphIntersect(sph, &tri1, &hitPos) ||
+         Math3D_TriVsSphIntersect(sph, &tri2, &hitPos);
+}

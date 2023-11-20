@@ -2,6 +2,7 @@
 #include "animation.hpp"
 #include "animation_data.hpp"
 #include "bombchu.hpp"
+#include "collider.hpp"
 #include "collision.hpp"
 #include "collision_data.hpp"
 #include "sys_math.hpp"
@@ -14,18 +15,6 @@
       printf(__VA_ARGS__);  \
     }                       \
   } while (0)
-
-// TODO: move somewhere common?
-bool testSphVsQuad(Sphere16* sph, Vec3f* quad) {
-  TriNorm tri1;
-  TriNorm tri2;
-  Vec3f hitPos;
-
-  Math3D_TriNorm(&tri1, &quad[2], &quad[3], &quad[1]);
-  Math3D_TriNorm(&tri2, &quad[1], &quad[0], &quad[2]);
-  return Math3D_TriVsSphIntersect(sph, &tri1, &hitPos) ||
-         Math3D_TriVsSphIntersect(sph, &tri2, &hitPos);
-}
 
 // TODO: colliders?
 bool testDamageRba(Collision* col, Cylinder16 object, Vec3f pos, u16 angle,
@@ -113,7 +102,7 @@ bool testDamageRba(Collision* col, Cylinder16 object, Vec3f pos, u16 angle,
 
     Vec3f shieldCorners[4];
     getShieldPosition(&animFrame, PLAYER_AGE_ADULT, pos, angle, shieldCorners);
-    bool hitShield = testSphVsQuad(&explosion, shieldCorners);
+    bool hitShield = colliderSphVsQuad(&explosion, shieldCorners);
 
     dprintf(debug, "f=%d x=%.9g y=%.9g z=%.9g speed=%.0f knockbackState=%d\n",
             f, pos.x, pos.y, pos.z, speed, knockbackState);
