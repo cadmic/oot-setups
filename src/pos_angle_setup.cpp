@@ -403,6 +403,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
   }
 
   PlayerAge age = this->col->age;
+  f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
 
   Vec3f prevRoot = baseRootTranslation(PLAYER_AGE_CHILD, this->angle);
   Vec3f prevPos = this->pos;
@@ -417,7 +418,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
     bool swordHit = false;
     if (curFrame >= 2) {
       swordHit =
-          swordRecoil(this->col, &animFrame, age, this->pos, this->angle);
+          weaponRecoil(this->col, &animFrame, age, swordLength, this->pos, this->angle);
     }
 
     bool onGround;
@@ -508,6 +509,7 @@ bool PosAngleSetup::crouchStab() {
   this->targeted = false;
 
   PlayerAge age = this->col->age;
+  f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
   f32 speed = 0.0f;
 
   AnimFrame animFrame;
@@ -518,7 +520,7 @@ bool PosAngleSetup::crouchStab() {
       loadAnimFrame(gPlayerAnim_link_normal_defense_kiru_Data, curFrame,
                     &animFrame);
       swordHit =
-          swordRecoil(this->col, &animFrame, age, this->pos, this->angle);
+          weaponRecoil(this->col, &animFrame, age, swordLength, this->pos, this->angle);
     }
 
     Vec3f prevPos = this->pos;

@@ -170,24 +170,23 @@ Vec3f heldActorPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos,
   return (leftHandPos + rightHandPos) * 0.5f;
 }
 
-void getSwordPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
-                      Vec3f* outBase, Vec3f* outTip) {
+void getWeaponPosition(AnimFrame* animFrame, PlayerAge age, f32 weaponLength, Vec3f pos, u16 angle,
+                       Vec3f* outBase, Vec3f* outTip) {
   MtxF limbMatrices[PLAYER_LIMB_MAX];
   applyAnimFrame(animFrame, age, pos, angle, limbMatrices);
 
   Vec3f baseOffset = {0.0f, 400.0f, 0.0f};
   Matrix_MultVec3fExt(&baseOffset, outBase, &limbMatrices[PLAYER_LIMB_L_HAND]);
 
-  f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
-  Vec3f tipOffset = {swordLength, 400.0f, 0.0f};
+  Vec3f tipOffset = {weaponLength, 400.0f, 0.0f};
   Matrix_MultVec3fExt(&tipOffset, outTip, &limbMatrices[PLAYER_LIMB_L_HAND]);
 }
 
-bool swordRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, Vec3f pos,
-                 u16 angle) {
+bool weaponRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, f32 weaponLength, Vec3f pos,
+                  u16 angle) {
   Vec3f swordBase;
   Vec3f swordTip;
-  getSwordPosition(animFrame, age, pos, angle, &swordBase, &swordTip);
+  getWeaponPosition(animFrame, age, weaponLength, pos, angle, &swordBase, &swordTip);
 
   f32 dist = Math_Vec3f_DistXYZ(&swordTip, &swordBase);
   Vec3f checkBase = swordTip + (swordBase - swordTip) * ((dist + 10.0f) / dist);

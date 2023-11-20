@@ -63,13 +63,13 @@ void updateRootTranslation(AnimFrame* animFrame, Vec3f* pos, u16 angle,
 Vec3f heldActorPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos,
                         u16 angle);
 
-// Compute sword base and tip positions.
-void getSwordPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
-                      Vec3f* outBase, Vec3f* outTip);
+// Compute weapon base and tip positions.
+void getWeaponPosition(AnimFrame* animFrame, PlayerAge age, f32 weaponLength, Vec3f pos, u16 angle,
+                       Vec3f* outBase, Vec3f* outTip);
 
-// Tests if sword collides with a wall.
-bool swordRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, Vec3f pos,
-                 u16 angle);
+// Tests if weapon collides with a wall.
+bool weaponRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, f32 weaponLength, Vec3f pos,
+                  u16 angle);
 
 // Compute shield corner positions. The order is DR, UR, DL, UL.
 void getShieldPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos,
