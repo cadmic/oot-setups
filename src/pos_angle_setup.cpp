@@ -154,9 +154,12 @@ PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
       pos(initialPos),
       angle(initialAngle),
       floorPoly(NULL),
-      dynaId(-1) {
+      dynaId(-1),
+      cameraAngle(0),
+      cameraStable(false) {
   this->col->findFloor({this->pos.x, this->pos.y + 50.0f, this->pos.z},
                        &this->floorPoly, &this->dynaId);
+  updateCameraAngle();
 }
 
 PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
@@ -175,32 +178,12 @@ bool PosAngleSetup::essRight(int n) {
 }
 
 bool PosAngleSetup::cameraTurn(u16 offset) {
-  if (!this->floorPoly) {
+  if (!this->cameraStable) {
     return false;
   }
 
-  // TODO: cache camera angle somehow?
-  int setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
-  Camera camera(this->col);
-  camera.initParallel(this->pos, this->angle, setting);
-  camera.updateNormal(this->pos, this->angle, setting);
-  u16 cameraAngle = camera.yaw();
-
-  // Assume the camera is stable enough for turns if the camera settles within
-  // 10 frames or so
-  for (int i = 0; i < 10; i++) {
-    camera.updateNormal(this->pos, this->angle, setting);
-    u16 newCameraAngle = camera.yaw();
-
-    if (newCameraAngle == cameraAngle) {
-      this->angle = cameraAngle + offset;
-      return true;
-    }
-
-    cameraAngle = newCameraAngle;
-  }
-
-  return false;
+  this->angle = this->cameraAngle + offset;
+  return true;
 }
 
 bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
@@ -494,7 +477,7 @@ bool PosAngleSetup::crouchStab() {
   return true;
 }
 
-bool PosAngleSetup::performAction(Action action) {
+bool PosAngleSetup::doAction(Action action) {
   switch (action) {
     case ROLL:
       return roll(this->angle, false);
@@ -600,6 +583,44 @@ bool PosAngleSetup::performAction(Action action) {
       return cameraTurn(0x8000);
   }
   return false;
+}
+
+void PosAngleSetup::updateCameraAngle() {
+  this->cameraStable = false;
+
+  if (!this->floorPoly) {
+    return;
+  }
+
+  int setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
+  Camera camera(this->col);
+  camera.initParallel(this->pos, this->angle, setting);
+  camera.updateNormal(this->pos, this->angle, setting);
+  u16 prevCameraAngle = camera.yaw();
+
+  // Assume the camera is stable enough for turns if the camera settles within
+  // 10 frames or so
+  for (int i = 0; i < 10; i++) {
+    camera.updateNormal(this->pos, this->angle, setting);
+    u16 newCameraAngle = camera.yaw();
+
+    if (newCameraAngle == prevCameraAngle) {
+      this->cameraStable = true;
+      this->cameraAngle = newCameraAngle;
+      break;
+    }
+
+    cameraAngle = newCameraAngle;
+  }
+}
+
+bool PosAngleSetup::performAction(Action action) {
+  if (!doAction(action)) {
+    return false;
+  }
+
+  updateCameraAngle();
+  return true;
 }
 
 bool PosAngleSetup::performActions(const std::vector<Action>& actions) {

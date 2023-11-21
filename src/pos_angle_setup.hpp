@@ -64,13 +64,19 @@ int actionsCost(const std::vector<Action>& action);
 struct SwordSlash;
 
 struct PosAngleSetup {
+  // Parameters
   Collision* col;
   Vec3f minBounds;
   Vec3f maxBounds;
+  // Current position and angle
   Vec3f pos;
   u16 angle;
+  // Cached collision check data
   CollisionPoly* floorPoly;
   int dynaId;
+  // Cached camera angle
+  u16 cameraAngle;
+  bool cameraStable;
 
   PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
                 Vec3f minBounds, Vec3f maxBounds);
@@ -80,6 +86,7 @@ struct PosAngleSetup {
   bool performAction(Action action);
   bool performActions(const std::vector<Action>& actions);
 
+ private:
   bool essLeft(int n);
   bool essRight(int n);
   bool cameraTurn(u16 offset);
@@ -94,4 +101,7 @@ struct PosAngleSetup {
   bool swordSlash(const SwordSlash& slash, bool lunge, bool shield);
   bool jumpslash(bool holdUp, bool shield);
   bool crouchStab();
+
+  bool doAction(Action action);
+  void updateCameraAngle();
 };
