@@ -263,15 +263,19 @@ bool PosAngleSetup::moveOnGround(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
 }
 
 bool PosAngleSetup::settle() {
-  Vec3f prevPos;
-  do {
-    prevPos = this->pos;
+  for (int i = 0; i < 10; i++) {
+    Vec3f prevPos = this->pos;
+
     if (!moveOnGround(prevPos, this->angle, 0, -5.0f)) {
       return false;
     }
-  } while (pos != prevPos);
 
-  return true;
+    if (this->pos == prevPos) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool PosAngleSetup::roll(u16 movementAngle, bool untarget) {
