@@ -3,6 +3,7 @@
 #include "collider.hpp"
 #include "collision_data.hpp"
 #include "pos_angle_setup.hpp"
+#include "search.hpp"
 #include "sys_math.hpp"
 
 Vec3f switchPos = {-3160, 760, -540};
@@ -188,107 +189,77 @@ void findMegaflips() {
   }
 }
 
-bool nextCombination(std::vector<int>& v, int n) {
-  int k = v.size();
-  for (int i = k - 1; i >= 0; i--) {
-    if (v[i] < n - 1) {
-      v[i]++;
-      for (int j = i + 1; j < k; j++) {
-        v[j] = v[j - 1] + 1;
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
 void findPosAngleSetups(Collision* col) {
   // door opening
   Vec3f initialPos = {intToFloat(0xc534084f), 760, intToFloat(0xc33368f6)};
   u16 initialAngle = 0xc000;
-  std::vector<Action> angleSetup = {TURN_ESS_LEFT, TURN_LEFT};
 
   // corner
   // Vec3f initialPos = {-2838, 760, -98};
   // u16 initialAngle = 0x0000;
-  // std::vector<Action> angleSetup = {TURN_ESS_LEFT};
 
   // corner
   // Vec3f initialPos = {-2838, 760, -98};
   // u16 initialAngle = 0x4000;
-  // std::vector<Action> angleSetup = {TURN_RIGHT, TURN_ESS_LEFT};
 
-  std::vector<Action> addlActions = {
-      ROLL,
-      LONG_ROLL,
-      SHIELD_SCOOT,
-      BACKFLIP,
-      BACKFLIP_SIDEROLL,
-      SIDEHOP_LEFT,
-      SIDEHOP_LEFT_SIDEROLL,
-      SIDEHOP_RIGHT,
-      SIDEHOP_RIGHT_SIDEROLL,
+  SearchParams params = {
+      .maxCost = 65,
+      .angleMin = 0x03b8,
+      .angleMax = 0x0d5f,
+      .xMin = -3061,
+      .xMax = -3000,
+      .zMin = -257,
+      .zMax = -190,
+      .actions =
+          {
+              ROLL,
+              BACKFLIP,
+              BACKFLIP_SIDEROLL,
+              BACKFLIP_SIDEROLL_UNTARGET,
+              SIDEHOP_LEFT,
+              SIDEHOP_LEFT_SIDEROLL,
+              SIDEHOP_LEFT_SIDEROLL_UNTARGET,
+              SIDEHOP_RIGHT,
+              SIDEHOP_RIGHT_SIDEROLL,
+              SIDEHOP_RIGHT_SIDEROLL_UNTARGET,
 
-      HORIZONTAL_SLASH,
-      HORIZONTAL_SLASH_SHIELD,
-      DIAGONAL_SLASH,
-      DIAGONAL_SLASH_SHIELD,
-      VERTICAL_SLASH,
-      VERTICAL_SLASH_SHIELD,
-      FORWARD_STAB,
-      FORWARD_STAB_SHIELD,
-      CROUCH_STAB,
+              HORIZONTAL_SLASH,
+              HORIZONTAL_SLASH_SHIELD,
+              DIAGONAL_SLASH,
+              DIAGONAL_SLASH_SHIELD,
+              VERTICAL_SLASH,
+              VERTICAL_SLASH_SHIELD,
+              FORWARD_STAB,
+              FORWARD_STAB_SHIELD,
+              CROUCH_STAB,
+
+              TURN_ESS_LEFT,
+              TURN_ESS_RIGHT,
+              TURN_LEFT,
+              TURN_RIGHT,
+              TURN_DOWN,
+          },
   };
 
-  int tested = 0;
-  int found = 0;
-
-  std::vector<Action> actions;
-  actions.reserve(10);
-  for (int k = 2; k <= 4; k++) {
-    std::vector<int> indices(k, 0);
-    do {
-      actions = angleSetup;
-      for (int i = 0; i < k; i++) {
-        actions.push_back(addlActions[indices[i]]);
-      }
-      std::sort(actions.begin(), actions.end());
-
-      do {
-        if (tested % 1000 == 0) {
-          fprintf(stderr, "tested=%d found=%d k=%d ", tested, found, k);
-          for (int i = 0; i < k; i++) {
-            fprintf(stderr, "%d ", indices[i]);
-          }
-
-          fprintf(stderr, "... \r");
-        }
-        tested++;
-
-        PosAngleSetup setup(col, initialPos, initialAngle,
-                            {-10000, 760, -10000}, {10000, 10000, 10000});
-        if (!setup.performActions(actions)) {
-          continue;
-        }
-
-        if (!setup.performAction(BACKFLIP_SIDEROLL)) {
-          continue;
-        }
-
+  PosAngleSetup start(col, initialPos, initialAngle, {-10000, 760, -10000},
+                      {10000, 10000, 10000});
+  searchSetups(
+      params, start,
+      [&](const PosAngleSetup& setup, const std::vector<Action>& path,
+          int cost) {
         if (testMegaflip(setup.pos, setup.angle, false)) {
-          found++;
           printf("cost=%d angle=%04x x=%.9g (%08x) z=%.9g (%08x) actions=",
-                 actionsCost(actions), setup.angle, setup.pos.x,
-                 floatToInt(setup.pos.x), setup.pos.z, floatToInt(setup.pos.z));
-          for (Action action : actions) {
+                 cost, setup.angle, setup.pos.x, floatToInt(setup.pos.x),
+                 setup.pos.z, floatToInt(setup.pos.z));
+          for (Action action : path) {
             printf("%s,", actionName(action));
           }
           printf("\n");
           fflush(stdout);
+          return true;
         }
-      } while (std::next_permutation(actions.begin(), actions.end()));
-    } while (nextCombination(indices, addlActions.size()));
-  }
+        return false;
+      });
 }
 
 int main(int argc, char* argv[]) {
