@@ -428,7 +428,7 @@ void findPosAngleSetups(Collision* col) {
 
   // Idea: try permutations of angle setup, adding angle-preserving actions
   // in between
-  std::vector<Action> angleSetup = {BACKFLIP_SIDEROLL_RETARGET, TURN_7_ESS_LEFT,
+  std::vector<Action> angleSetup = {BACKFLIP_SIDEROLL_UNTARGET, TURN_7_ESS_LEFT,
                                     TURN_LEFT};
 
   std::vector<Action> addlActions = {
@@ -459,7 +459,7 @@ void findPosAngleSetups(Collision* col) {
             // Ban some first actions
             if (actions[0] == ROLL || actions[0] == TURN_ESS_LEFT ||
                 actions[0] == TURN_2_ESS_LEFT ||
-                actions[0] == SIDEHOP_RIGHT_SIDEROLL_RETARGET) {
+                actions[0] == SIDEHOP_RIGHT_SIDEROLL_UNTARGET) {
               continue;
             }
 

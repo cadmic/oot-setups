@@ -279,30 +279,22 @@ bool testPosAngleSetup(Collision* col, const std::vector<Action>& actions,
   PosAngleSetup setup(col, initialPos, initialAngle);
   for (int i = 0; i < actions.size(); i++) {
     Action action = actions[i];
-    if (setup.pos.z <= -2972 && ((i > 0 && (actions[i - 1] == TURN_ESS_RIGHT ||
-                                            actions[i - 1] == TURN_ESS_LEFT)) ||
-                                 (i == 0 && setup.angle != 0x8000))) {
-      // against wall; only allow actions that don't require targeting
-      switch (action) {
-        case TURN_ESS_LEFT:
-        case TURN_ESS_RIGHT:
-        case HORIZONTAL_SLASH:
-        case HORIZONTAL_SLASH_SHIELD:
-        case CROUCH_STAB:
-          break;
-        default:
-          return false;
-      }
-    }
+
+    Vec3f prevPos = setup.pos;
+    u16 prevAngle = setup.angle;
 
     if (!setup.performAction(action)) {
       return false;
     }
 
+    if (setup.pos == prevPos && setup.angle == prevAngle) {
+      return false;
+    }
+
     if (debug) {
-      printf("%s: x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n", actionName(action),
-             setup.pos.x, setup.pos.z, floatToInt(setup.pos.x),
-             floatToInt(setup.pos.z));
+      printf("%s: angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x\n",
+             actionName(action), setup.angle, setup.pos.x, setup.pos.z,
+             floatToInt(setup.pos.x), floatToInt(setup.pos.z));
     }
   }
 

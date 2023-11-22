@@ -8,18 +8,19 @@
 // Helper for brute forcing position and angle setups.
 
 #define ACTIONS                      \
+  X(TARGET_WALL)                     \
   X(ROLL)                            \
   X(LONG_ROLL)                       \
   X(SHIELD_SCOOT)                    \
   X(SIDEHOP_LEFT)                    \
   X(SIDEHOP_LEFT_SIDEROLL)           \
-  X(SIDEHOP_LEFT_SIDEROLL_RETARGET)  \
+  X(SIDEHOP_LEFT_SIDEROLL_UNTARGET)  \
   X(SIDEHOP_RIGHT)                   \
   X(SIDEHOP_RIGHT_SIDEROLL)          \
-  X(SIDEHOP_RIGHT_SIDEROLL_RETARGET) \
+  X(SIDEHOP_RIGHT_SIDEROLL_UNTARGET) \
   X(BACKFLIP)                        \
   X(BACKFLIP_SIDEROLL)               \
-  X(BACKFLIP_SIDEROLL_RETARGET)      \
+  X(BACKFLIP_SIDEROLL_UNTARGET)      \
   X(HORIZONTAL_SLASH)                \
   X(HORIZONTAL_SLASH_SHIELD)         \
   X(DIAGONAL_SLASH)                  \
@@ -68,15 +69,20 @@ struct PosAngleSetup {
   Collision* col;
   Vec3f minBounds;
   Vec3f maxBounds;
-  // Current position and angle
+  // Current state
   Vec3f pos;
   u16 angle;
-  // Cached collision check data
+  bool targeted;
+  // Collision check data
+  CollisionPoly* wallPoly;
   CollisionPoly* floorPoly;
   int dynaId;
-  // Cached camera angle
-  u16 cameraAngle;
+  // Camera data
   bool cameraStable;
+  u16 cameraAngle;
+  // Wall interaction for targeting
+  bool canTargetWall;
+  u16 targetWallAngle;
 
   PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
                 Vec3f minBounds, Vec3f maxBounds);
@@ -87,6 +93,8 @@ struct PosAngleSetup {
   bool performActions(const std::vector<Action>& actions);
 
  private:
+  bool ensureTargeted();
+  bool targetWall();
   bool essLeft(int n);
   bool essRight(int n);
   bool cameraTurn(u16 offset);
@@ -98,10 +106,12 @@ struct PosAngleSetup {
   bool longRoll();
   bool shieldScoot();
   bool jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed);
-  bool swordSlash(const SwordSlash& slash, bool lunge, bool shield);
+  bool swordSlash(const SwordSlash& slash, bool requiresTarget, bool lunge,
+                  bool shield);
   bool jumpslash(bool holdUp, bool shield);
   bool crouchStab();
 
   bool doAction(Action action);
   void updateCameraAngle();
+  void updateTargetWall();
 };

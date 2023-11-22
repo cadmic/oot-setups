@@ -607,12 +607,13 @@ unsigned long long tested = 0;
 int close = 0;
 int found = 0;
 
-void searchSetups(Collision* col, Vec3f initialPos, u16 initialAngle,
-                  std::vector<int>* targets, std::vector<int>* essDirs,
-                  std::vector<HessResult>* results,
-                  std::vector<Action>* actions, Vec3f pos, u16 angle, int cost,
-                  int depth) {
+void searchSetups(Vec3f initialPos, u16 initialAngle, std::vector<int>* targets,
+                  std::vector<int>* essDirs, std::vector<HessResult>* results,
+                  std::vector<Action>* actions, const PosAngleSetup& setup,
+                  int cost, int depth) {
   int k = actions->size();
+  Vec3f pos = setup.pos;
+  u16 angle = setup.angle;
 
   if (depth == 0) {
     if (tested % 10000 == 0) {
@@ -632,7 +633,7 @@ void searchSetups(Collision* col, Vec3f initialPos, u16 initialAngle,
         pos.z < -2880) {
       close++;
       results->clear();
-      findHessPaths(col, pos, angle, true, targets, essDirs, results);
+      findHessPaths(setup.col, pos, angle, true, targets, essDirs, results);
       if (!results->empty()) {
         found++;
 
@@ -659,37 +660,6 @@ void searchSetups(Collision* col, Vec3f initialPos, u16 initialAngle,
           (action == TURN_ESS_RIGHT && actions->back() == TURN_ESS_LEFT)) {
         continue;
       }
-
-      // against wall
-      if ((pos.x == 185 && 0x2000 <= angle && angle <= 0x6000) ||
-          (pos.z <= -2972 && 0x6000 <= angle && angle <= 0xa000) ||
-          (pos.x == 53 && 0xa000 <= angle && angle <= 0xe000)) {
-        switch (actions->back()) {
-          case TURN_ESS_UP:
-          case TURN_ESS_LEFT:
-          case TURN_ESS_RIGHT:
-          case TURN_LEFT:
-          case TURN_DOWN:
-          case TURN_RIGHT:
-          case SIDEHOP_LEFT_SIDEROLL_RETARGET:
-          case SIDEHOP_RIGHT_SIDEROLL_RETARGET:
-            // previous action was untargeted; only allow actions that don't
-            // require targeting
-            switch (action) {
-              case TURN_ESS_LEFT:
-              case TURN_ESS_RIGHT:
-              case HORIZONTAL_SLASH:
-              case HORIZONTAL_SLASH_SHIELD:
-              case CROUCH_STAB:
-                break;
-              default:
-                continue;
-            }
-            break;
-          default:
-            break;
-        }
-      }
     }
 
     int newCost = cost;
@@ -705,17 +675,17 @@ void searchSetups(Collision* col, Vec3f initialPos, u16 initialAngle,
       continue;
     }
 
-    PosAngleSetup setup(col, pos, angle);
-    if (!setup.performAction(action)) {
+    PosAngleSetup newSetup = setup;
+    if (!newSetup.performAction(action)) {
       continue;
     }
-    if (setup.pos == pos && setup.angle == angle) {
+    if (newSetup.pos == pos && newSetup.angle == angle) {
       continue;
     }
 
     // Check if there's no hope of reaching required angle with ESS turns and
     // cardinal turns (with leeway for angle range and ess up shenanigans)
-    int angleDiff = (setup.angle - 0xd900) % 0x4000;
+    int angleDiff = (newSetup.angle - 0xd900) % 0x4000;
     if (angleDiff < 0) {
       angleDiff += 0x4000;
     }
@@ -725,8 +695,8 @@ void searchSetups(Collision* col, Vec3f initialPos, u16 initialAngle,
     }
 
     actions->push_back(action);
-    searchSetups(col, initialPos, initialAngle, targets, essDirs, results,
-                 actions, setup.pos, setup.angle, newCost, depth - 1);
+    searchSetups(initialPos, initialAngle, targets, essDirs, results, actions,
+                 newSetup, newCost, depth - 1);
     actions->pop_back();
   }
 }
@@ -755,8 +725,9 @@ void findPosAngleSetups(Collision* col) {
     for (const auto& initialPosition : initialPositions) {
       Vec3f initialPos = initialPosition.first;
       u16 initialAngle = initialPosition.second;
-      searchSetups(col, initialPos, initialAngle, &targets, &essDirs, &results,
-                   &actions, initialPos, initialAngle, 0, depth);
+      PosAngleSetup setup(col, initialPos, initialAngle);
+      searchSetups(initialPos, initialAngle, &targets, &essDirs, &results,
+                   &actions, setup, 0, depth);
     }
   }
 }

@@ -21,6 +21,8 @@ int essCost(int turns) { return turns + 6; }
 // TODO: make these numbers more principled
 int actionCost(Action action) {
   switch (action) {
+    case TARGET_WALL:
+      return 3;
     case ROLL:
       return 13;
     case LONG_ROLL:
@@ -31,14 +33,14 @@ int actionCost(Action action) {
     case SIDEHOP_RIGHT:
       return 8;
     case SIDEHOP_LEFT_SIDEROLL:
-    case SIDEHOP_LEFT_SIDEROLL_RETARGET:
+    case SIDEHOP_LEFT_SIDEROLL_UNTARGET:
     case SIDEHOP_RIGHT_SIDEROLL:
-    case SIDEHOP_RIGHT_SIDEROLL_RETARGET:
+    case SIDEHOP_RIGHT_SIDEROLL_UNTARGET:
       return 21;
     case BACKFLIP:
       return 13;
     case BACKFLIP_SIDEROLL:
-    case BACKFLIP_SIDEROLL_RETARGET:
+    case BACKFLIP_SIDEROLL_UNTARGET:
       return 26;
     // TODO: these slash timings are a bit optimistic
     case HORIZONTAL_SLASH:
@@ -105,6 +107,7 @@ int actionsCost(const std::vector<Action>& actions) {
 }
 
 struct SwordSlash {
+  bool requiresTarget;
   u16* startAnimData;
   int startAnimFrames;
   u16* endAnimData;
@@ -153,13 +156,20 @@ PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
       maxBounds(maxBounds),
       pos(initialPos),
       angle(initialAngle),
+      targeted(true),
+      wallPoly(NULL),
       floorPoly(NULL),
       dynaId(-1),
+      cameraStable(false),
       cameraAngle(0),
-      cameraStable(false) {
-  this->col->findFloor({this->pos.x, this->pos.y + 50.0f, this->pos.z},
-                       &this->floorPoly, &this->dynaId);
+      canTargetWall(false),
+      targetWallAngle(0) {
+  f32 floorHeight;
+  this->col->runChecks(
+      this->pos, translate(this->pos, this->angle, 0.0f, -5.0f),
+      &this->wallPoly, &this->floorPoly, &this->dynaId, &floorHeight);
   updateCameraAngle();
+  updateTargetWall();
 }
 
 PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
@@ -167,21 +177,47 @@ PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
                     Vec3f(-10000, -10000, -10000), Vec3f(10000, 10000, 10000)) {
 }
 
+bool PosAngleSetup::ensureTargeted() {
+  if (!this->targeted && this->canTargetWall &&
+      this->angle != this->targetWallAngle) {
+    return false;
+  }
+  this->targeted = true;
+  return true;
+}
+
+bool PosAngleSetup::targetWall() {
+  if (!this->canTargetWall) {
+    return false;
+  }
+
+  this->targeted = true;
+  this->angle = this->targetWallAngle;
+  return true;
+}
+
 bool PosAngleSetup::essLeft(int n) {
+  this->targeted = false;
   this->angle += n * 0x708;
   return true;
 }
 
 bool PosAngleSetup::essRight(int n) {
+  this->targeted = false;
   this->angle -= n * 0x708;
   return true;
 }
 
 bool PosAngleSetup::cameraTurn(u16 offset) {
+  if (!ensureTargeted()) {
+    return false;
+  }
+
   if (!this->cameraStable) {
     return false;
   }
 
+  this->targeted = false;
   this->angle = this->cameraAngle + offset;
   return true;
 }
@@ -238,7 +274,11 @@ bool PosAngleSetup::settle() {
   return true;
 }
 
-bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
+bool PosAngleSetup::roll(u16 movementAngle, bool untarget) {
+  if (!ensureTargeted()) {
+    return false;
+  }
+
   u16 facingAngle = this->angle;
   for (int i = 0; i < 11; i++) {
     Math_ScaledStepToS(&movementAngle, facingAngle, 2000);
@@ -261,13 +301,18 @@ bool PosAngleSetup::roll(u16 movementAngle, bool retarget) {
     return false;
   }
 
-  if (retarget) {
+  if (untarget) {
     this->angle = facingAngle;
+    this->targeted = false;
   }
   return true;
 }
 
 bool PosAngleSetup::longRoll() {
+  if (!ensureTargeted()) {
+    return false;
+  }
+
   for (int i = 0; i < 12; i++) {
     // 11 frames of roll up to 9 speed, 1 frame of 1 speed
     f32 xzSpeed = 0.0f;
@@ -291,6 +336,11 @@ bool PosAngleSetup::longRoll() {
 }
 
 bool PosAngleSetup::shieldScoot() {
+  if (!ensureTargeted()) {
+    return false;
+  }
+  this->targeted = false;
+
   for (int i = 0; i < 2; i++) {
     if (!moveOnGround(this->pos, this->angle, 2.0f, -5.0f)) {
       return false;
@@ -305,6 +355,10 @@ bool PosAngleSetup::shieldScoot() {
 }
 
 bool PosAngleSetup::jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed) {
+  if (!ensureTargeted()) {
+    return false;
+  }
+
   bool onGround;
   for (int i = 0; i < 20; i++) {
     ySpeed -= 1.0f;
@@ -330,8 +384,12 @@ bool PosAngleSetup::jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed) {
   return true;
 }
 
-bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
-                               bool shield) {
+bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
+                               bool lunge, bool shield) {
+  if (requiresTarget && !ensureTargeted()) {
+    return false;
+  }
+
   PlayerAge age = this->col->age;
 
   Vec3f prevRoot = baseRootTranslation(this->angle);
@@ -405,6 +463,10 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool lunge,
 }
 
 bool PosAngleSetup::jumpslash(bool holdUp, bool shield) {
+  if (!ensureTargeted()) {
+    return false;
+  }
+
   f32 xzSpeed = 5.0f;
   f32 ySpeed = 5.0f;
   f32 gravity = 1.0f;
@@ -427,10 +489,12 @@ bool PosAngleSetup::jumpslash(bool holdUp, bool shield) {
     }
   }
 
-  return swordSlash(jumpslashLanding, false, shield);
+  return swordSlash(jumpslashLanding, false, false, shield);
 }
 
 bool PosAngleSetup::crouchStab() {
+  this->targeted = false;
+
   PlayerAge age = this->col->age;
   f32 speed = 0.0f;
 
@@ -479,6 +543,8 @@ bool PosAngleSetup::crouchStab() {
 
 bool PosAngleSetup::doAction(Action action) {
   switch (action) {
+    case TARGET_WALL:
+      return targetWall();
     case ROLL:
       return roll(this->angle, false);
     case LONG_ROLL:
@@ -492,7 +558,7 @@ bool PosAngleSetup::doAction(Action action) {
         return false;
       }
       return roll(this->angle + 0x4000, false);
-    case SIDEHOP_LEFT_SIDEROLL_RETARGET:
+    case SIDEHOP_LEFT_SIDEROLL_UNTARGET:
       if (!jump(this->angle + 0x4000, 8.5f, 3.5f)) {
         return false;
       }
@@ -504,7 +570,7 @@ bool PosAngleSetup::doAction(Action action) {
         return false;
       }
       return roll(this->angle - 0x4000, false);
-    case SIDEHOP_RIGHT_SIDEROLL_RETARGET:
+    case SIDEHOP_RIGHT_SIDEROLL_UNTARGET:
       if (!jump(this->angle - 0x4000, 8.5f, 3.5f)) {
         return false;
       }
@@ -516,27 +582,27 @@ bool PosAngleSetup::doAction(Action action) {
         return false;
       }
       return roll(this->angle + 0x8000, false);
-    case BACKFLIP_SIDEROLL_RETARGET:
+    case BACKFLIP_SIDEROLL_UNTARGET:
       if (!jump(this->angle + 0x8000, 6.0f, 5.8f)) {
         return false;
       }
       return roll(this->angle + 0x8000, true);
     case HORIZONTAL_SLASH:
-      return swordSlash(horizontalSlash, false, false);
+      return swordSlash(horizontalSlash, false, false, false);
     case HORIZONTAL_SLASH_SHIELD:
-      return swordSlash(horizontalSlash, false, true);
+      return swordSlash(horizontalSlash, false, false, true);
     case DIAGONAL_SLASH:
-      return swordSlash(diagonalSlash, false, false);
+      return swordSlash(diagonalSlash, true, false, false);
     case DIAGONAL_SLASH_SHIELD:
-      return swordSlash(diagonalSlash, false, true);
+      return swordSlash(diagonalSlash, true, false, true);
     case VERTICAL_SLASH:
-      return swordSlash(verticalSlash, false, false);
+      return swordSlash(verticalSlash, true, false, false);
     case VERTICAL_SLASH_SHIELD:
-      return swordSlash(verticalSlash, false, true);
+      return swordSlash(verticalSlash, true, false, true);
     case FORWARD_STAB:
-      return swordSlash(forwardStab, true, false);
+      return swordSlash(forwardStab, true, true, false);
     case FORWARD_STAB_SHIELD:
-      return swordSlash(forwardStab, true, true);
+      return swordSlash(forwardStab, true, true, true);
     case JUMPSLASH:
       return jumpslash(false, false);
     case JUMPSLASH_SHIELD:
@@ -614,12 +680,39 @@ void PosAngleSetup::updateCameraAngle() {
   }
 }
 
+void PosAngleSetup::updateTargetWall() {
+  this->canTargetWall = false;
+
+  if (!this->wallPoly) {
+    return;
+  }
+
+  f32 offset = this->col->age == PLAYER_AGE_CHILD ? 24.0f : 28.0f;
+  Vec3f posA = this->pos + Vec3f(0.0f, 18.0f, 0.0f);
+  Vec3f posB = posA + Vec3f(offset * Math_SinS(this->angle), 0.0f,
+                            offset * Math_CosS(this->angle));
+
+  CollisionPoly* wallPoly;
+  this->col->entityLineTest(posA, posB, true, false, false, &wallPoly);
+  if (wallPoly) {
+    Vec3f normal = CollisionPoly_GetNormalF(wallPoly);
+    u16 wallYaw = Math_Atan2S(normal.z, normal.x);
+
+    u16 diff = this->angle - wallYaw + 0x8000;
+    if (diff < 0x2000 || diff > 0xe000) {
+      this->canTargetWall = true;
+      this->targetWallAngle = wallYaw + 0x8000;
+    }
+  }
+}
+
 bool PosAngleSetup::performAction(Action action) {
   if (!doAction(action)) {
     return false;
   }
 
   updateCameraAngle();
+  updateTargetWall();
   return true;
 }
 
