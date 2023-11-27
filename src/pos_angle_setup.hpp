@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include <vector>
 
 #include "collision.hpp"
@@ -51,6 +52,9 @@ enum Action {
 
 // Returns the name of the action.
 const char* actionName(Action action);
+
+// Returns the names of the actions as a comma-separated list.
+std::string actionNames(const std::vector<Action>& actions);
 
 // Returns the appoximate cost (in frames) of the action in isolation.
 int actionCost(Action action);

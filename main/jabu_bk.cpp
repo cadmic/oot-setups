@@ -413,13 +413,9 @@ void testPosAngleSetup(Collision* col, Vec3f initialPos,
       if (testHessSetup(col, pos, angle, setups[j], essAngle, debug)) {
         printf(
             "cost=%d startx=%.9g x=%.9g z=%.9g x_raw=%08x z_raw=%08x "
-            "essAngle=%04x hessSetup=%d actions=",
+            "essAngle=%04x hessSetup=%d actions=%s\n",
             cost, initialPos.x, pos.x, pos.z, floatToInt(pos.x),
-            floatToInt(pos.z), essAngle, j);
-        for (Action action : actions) {
-          printf("%s,", actionName(action));
-        }
-        printf("\n");
+            floatToInt(pos.z), essAngle, j, actionNames(actions).c_str());
       }
     }
   }

@@ -8,13 +8,24 @@
 #include "sys_math3d.hpp"
 #include "sys_matrix.hpp"
 
-const char* actionNames[] = {
+const char* actionNameTable[] = {
 #define X(name) #name,
     ACTIONS
 #undef X
 };
 
-const char* actionName(Action action) { return actionNames[action]; }
+const char* actionName(Action action) { return actionNameTable[action]; }
+
+std::string actionNames(const std::vector<Action>& actions) {
+  std::string result;
+  for (int i = 0; i < actions.size(); i++) {
+    if (i > 0) {
+      result += ",";
+    }
+    result += actionName(actions[i]);
+  }
+  return result;
+}
 
 // TODO: make these numbers more principled
 int actionCost(Action action) {

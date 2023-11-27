@@ -87,12 +87,10 @@ void doSearch(const SearchParams& params, SearchState* state,
   time_t now = time(nullptr);
   if (now - state->lastPrint >= 1) {
     state->lastPrint = now;
-    fprintf(stderr, "tested=%llu close=%llu found=%llu start=%d actions=",
-            state->tested, state->close, state->found, state->startIndex);
-    for (Action action : state->path) {
-      fprintf(stderr, "%s,", actionName(action));
-    }
-    fprintf(stderr, "...\n");
+    fprintf(stderr,
+            "tested=%llu close=%llu found=%llu start=%d actions=%s ...\n",
+            state->tested, state->close, state->found, state->startIndex,
+            actionNames(state->path).c_str());
   }
 
   Vec3f pos = setup.pos;

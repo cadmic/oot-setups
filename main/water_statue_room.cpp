@@ -244,14 +244,10 @@ void findPosAngleSetups(Collision* col, int argc, char* argv[]) {
     if (testMegaflip(finalPos, finalAngle, false)) {
       printf(
           "cost=%d startAngle=%04x startx=%.9g startz=%.9g angle=%04x x=%.9g "
-          "(%08x) z=%.9g (%08x) actions=",
+          "(%08x) z=%.9g (%08x) actions=%s\n",
           cost, initialAngle, initialPos.x, initialPos.z, finalAngle,
           finalPos.x, floatToInt(finalPos.x), finalPos.z,
-          floatToInt(finalPos.z));
-      for (Action action : path) {
-        printf("%s,", actionName(action));
-      }
-      printf("\n");
+          floatToInt(finalPos.z), actionNames(path).c_str());
       fflush(stdout);
       return true;
     }

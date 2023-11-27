@@ -481,16 +481,11 @@ void testPosAngleSetup(Collision* col, Collision* setupCol,
       printf(
           "cost=%d angle=%04x x=%.9g y=%.9g z=%.9g x_raw=%08x y_raw=%08x "
           "z_raw=%08x bombSetup=%s holdUp=%d grabFrame=%d "
-          "minBombTimer=%d "
-          "maxBombTimer=%d bombTimerWindow=%d actions=",
+          "minBombTimer=%d maxBombTimer=%d bombTimerWindow=%d actions=%s\n",
           setupCost(actions), angle, pos.x, pos.y, pos.z, floatToInt(pos.x),
           floatToInt(pos.y), floatToInt(pos.z), bombSetupNames[bombSetup],
           holdUp, grabFrame, minBombTimer, maxBombTimer,
-          maxBombTimer - minBombTimer + 1);
-      for (Action action : actions) {
-        printf("%s,", actionName(action));
-      }
-      printf("\n");
+          maxBombTimer - minBombTimer + 1, actionNames(actions).c_str());
     }
   }
 }
