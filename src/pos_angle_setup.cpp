@@ -172,6 +172,7 @@ PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
       wallPoly(NULL),
       floorPoly(NULL),
       dynaId(-1),
+      cameraSetting(1),  // TODO: what should we default to?
       cameraStable(false),
       cameraAngle(0),
       canTargetWall(false),
@@ -647,16 +648,20 @@ void PosAngleSetup::updateCameraAngle() {
     return;
   }
 
-  int setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
+  u16 setting = this->col->getCameraSetting(this->floorPoly, this->dynaId);
+  if (setting != 0) {
+    this->cameraSetting = setting;
+  }
+
   Camera camera(this->col);
-  camera.initParallel(this->pos, this->angle, setting);
-  camera.updateNormal(this->pos, this->angle, setting);
+  camera.initParallel(this->pos, this->angle, this->cameraSetting);
+  camera.updateNormal(this->pos, this->angle, this->cameraSetting);
   u16 prevCameraAngle = camera.yaw();
 
   // Assume the camera is stable enough for turns if the camera settles within
   // 10 frames or so
   for (int i = 0; i < 10; i++) {
-    camera.updateNormal(this->pos, this->angle, setting);
+    camera.updateNormal(this->pos, this->angle, this->cameraSetting);
     u16 newCameraAngle = camera.yaw();
 
     if (newCameraAngle == prevCameraAngle) {

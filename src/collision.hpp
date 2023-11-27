@@ -118,5 +118,5 @@ struct Collision {
   f32 cameraFindFloor(Vec3f pos, CollisionPoly** outPoly);
 
   // Get camera setting for floor poly
-  int getCameraSetting(CollisionPoly* poly, int dynaId);
+  u16 getCameraSetting(CollisionPoly* poly, int dynaId);
 };
