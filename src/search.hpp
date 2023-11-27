@@ -50,29 +50,44 @@ void searchSetups(const SearchParams& params, Output output);
 template <typename Filter, typename Output>
 void searchSetups(const SearchParams& params, Filter filter, Output output);
 
+// Returns the number of search shards for the given depth. There's one shard
+// for each initial position and setup path up to the given depth.
+int numShards(const SearchParams& params, int depth);
+
+// Searches a single shard. The shard index is in the range [0, numShards).
+template <typename Output>
+void searchSetupsShard(const SearchParams& params, int depth, int shard,
+                       Output output);
+
+// Like above, but with a filter function.
+template <typename Filter, typename Output>
+void searchSetupsShard(const SearchParams& params, int depth, int shard,
+                       Filter filter, Output output);
+
 // Implementation details below
 
-struct SearchStats {
-  // Total number of nodes visited.
-  unsigned long long tested = 0;
-  // Number of nodes that reached the goal area.
-  unsigned long long close = 0;
-  // Number of nodes that reached the goal area and were successful.
-  unsigned long long found = 0;
-  // Time of last statistics print.
-  time_t lastPrint;
+struct SearchState {
+  unsigned long long tested = 0;  // Total number of nodes visited.
+  unsigned long long close = 0;   // Number of nodes that reached the goal area.
+  unsigned long long found = 0;   // Number of nodes that were successful.
+  time_t lastPrint;               // Time of last statistics print.
+  int startIndex;                 // Start index for current search.
+  Vec3f startPos;                 // Start position for current search.
+  u16 startAngle;                 // Start angle for current search.
+  std::vector<Action> path;       // Current path.
+  std::vector<Action> startActions;  // Start actions for all search paths.
 };
 
 template <typename Filter, typename Output>
-void doSearch(const SearchParams& params, int startIndex,
-              const PosAngleSetup& setup, Filter filter, Output output,
-              SearchStats* stats, std::vector<Action>* path, int cost) {
+void doSearch(const SearchParams& params, SearchState* state,
+              const PosAngleSetup& setup, int cost, Filter filter,
+              Output output) {
   time_t now = time(nullptr);
-  if (now - stats->lastPrint >= 1) {
-    stats->lastPrint = now;
+  if (now - state->lastPrint >= 1) {
+    state->lastPrint = now;
     fprintf(stderr, "tested=%llu close=%llu found=%llu start=%d actions=",
-            stats->tested, stats->close, stats->found, startIndex);
-    for (Action action : *path) {
+            state->tested, state->close, state->found, state->startIndex);
+    for (Action action : state->path) {
       fprintf(stderr, "%s,", actionName(action));
     }
     fprintf(stderr, "...\n");
@@ -106,13 +121,12 @@ void doSearch(const SearchParams& params, int startIndex,
     zDist = 0.0f;
   }
 
-  stats->tested++;
+  state->tested++;
   if (inAngleRange && xDist == 0.0f && zDist == 0.0f) {
-    stats->close++;
-    const auto& start = params.starts[startIndex];
-    if (output(start.first, start.second, setup.pos, setup.angle, *path,
-               cost)) {
-      stats->found++;
+    state->close++;
+    if (output(state->startPos, state->startAngle, setup.pos, setup.angle,
+               state->path, cost)) {
+      state->found++;
     }
   }
 
@@ -128,17 +142,16 @@ void doSearch(const SearchParams& params, int startIndex,
     return;
   }
 
-  int k = path->size();
+  int k = state->path.size();
   for (Action action : params.actions) {
-    // TODO
-    // if (k < params.startActions.size() && action != params.startActions[k]) {
-    //   continue;
-    // }
+    if (k < state->startActions.size() && action != state->startActions[k]) {
+      continue;
+    }
 
     // TODO: generalize this and record entire position/angle history?
     if (k > 0 &&
-        ((action == TURN_ESS_LEFT && path->back() == TURN_ESS_RIGHT) ||
-         (action == TURN_ESS_RIGHT && path->back() == TURN_ESS_LEFT))) {
+        ((action == TURN_ESS_LEFT && state->path.back() == TURN_ESS_RIGHT) ||
+         (action == TURN_ESS_RIGHT && state->path.back() == TURN_ESS_LEFT))) {
       continue;
     }
 
@@ -156,34 +169,83 @@ void doSearch(const SearchParams& params, int startIndex,
       continue;
     }
 
-    path->push_back(action);
-    doSearch(params, startIndex, newSetup, filter, output, stats, path,
-             newCost);
-    path->pop_back();
+    state->path.push_back(action);
+    doSearch(params, state, newSetup, newCost, filter, output);
+    state->path.pop_back();
   }
 }
 
 template <typename Filter, typename Output>
 void searchSetups(const SearchParams& params, Filter filter, Output output) {
-  SearchStats stats;
-  stats.lastPrint = time(nullptr);
-
-  std::vector<Action> path;
-  path.reserve(params.maxCost);
+  SearchState state;
+  state.lastPrint = time(nullptr);
+  state.path.reserve(params.maxCost);
 
   for (int i = 0; i < params.starts.size(); i++) {
-    const auto& start = params.starts[i];
-    PosAngleSetup setup(params.col, start.first, start.second, params.minBounds,
-                        params.maxBounds);
-    doSearch(params, i, setup, filter, output, &stats, &path, 0);
+    state.startIndex = i;
+    state.startPos = params.starts[i].first;
+    state.startAngle = params.starts[i].second;
+
+    PosAngleSetup setup(params.col, state.startPos, state.startAngle,
+                        params.minBounds, params.maxBounds);
+    doSearch(params, &state, setup, 0, filter, output);
   }
 
-  fprintf(stderr, "tested=%llu close=%llu found=%llu\n", stats.tested,
-          stats.close, stats.found);
+  fprintf(stderr, "tested=%llu close=%llu found=%llu\n", state.tested,
+          state.close, state.found);
 }
 
 template <typename Output>
 void searchSetups(const SearchParams& params, Output output) {
   auto filter = [](const PosAngleSetup&) { return true; };
   searchSetups(params, filter, output);
+}
+
+int numShards(const SearchParams& params, int depth) {
+  int numShards = params.starts.size();
+  for (int i = 0; i < depth; i++) {
+    numShards *= params.actions.size();
+  }
+  return numShards;
+}
+
+template <typename Filter, typename Output>
+void searchSetupsShard(const SearchParams& params, int depth, int shard,
+                       Filter filter, Output output) {
+  SearchState state;
+  state.lastPrint = time(nullptr);
+  state.path.reserve(params.maxCost);
+
+  int n = shard;
+  int numActions = params.actions.size();
+  for (int i = 0; i < depth; i++) {
+    state.startActions.push_back(params.actions[n % numActions]);
+    n /= numActions;
+  }
+  std::reverse(state.startActions.begin(), state.startActions.end());
+
+  if (n >= params.starts.size()) {
+    fprintf(stderr, "shard %d must be less than %d\n", shard,
+            numShards(params, depth));
+    return;
+  }
+
+  int startIndex = n;
+  state.startIndex = startIndex;
+  state.startPos = params.starts[startIndex].first;
+  state.startAngle = params.starts[startIndex].second;
+
+  PosAngleSetup setup(params.col, state.startPos, state.startAngle,
+                      params.minBounds, params.maxBounds);
+  doSearch(params, &state, setup, 0, filter, output);
+
+  fprintf(stderr, "tested=%llu close=%llu found=%llu shard=%d\n", state.tested,
+          state.close, state.found, shard);
+}
+
+template <typename Output>
+void searchSetupsShard(const SearchParams& params, int depth, int shard,
+                       Output output) {
+  auto filter = [](const PosAngleSetup&) { return true; };
+  searchSetupsShard(params, depth, shard, filter, output);
 }

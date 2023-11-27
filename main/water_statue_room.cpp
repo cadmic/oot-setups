@@ -189,7 +189,7 @@ void findMegaflips() {
   }
 }
 
-void findPosAngleSetups(Collision* col) {
+void findPosAngleSetups(Collision* col, int argc, char* argv[]) {
   SearchParams params = {
       .col = col,
       .minBounds = {-10000, 760, -10000},
@@ -258,7 +258,12 @@ void findPosAngleSetups(Collision* col) {
     return false;
   };
 
-  searchSetups(params, output);
+  if (argc > 1) {
+    int shard = atoi(argv[1]);
+    searchSetupsShard(params, 1, shard, output);
+  } else {
+    searchSetups(params, output);
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -277,7 +282,7 @@ int main(int argc, char* argv[]) {
 
   // findMegaflips();
 
-  findPosAngleSetups(&col);
+  findPosAngleSetups(&col, argc, argv);
 
   return 0;
 }
