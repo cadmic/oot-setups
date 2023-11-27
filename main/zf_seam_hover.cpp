@@ -101,7 +101,7 @@ void findSetups(Collision* col, int argc, char* argv[]) {
                 intToFloat(0x440a22a0)},
                0xdea4},
           },
-      .maxCost = 240,
+      .maxCost = 239,
       .angleMin = 0x0000,
       .angleMax = 0xffff,
       .xMin = -1787,
@@ -130,47 +130,67 @@ void findSetups(Collision* col, int argc, char* argv[]) {
           },
   };
 
-  auto filter = [&](const PosAngleSetup& setup) {
-    Vec3f signPos = {-2557, 3, 486};
-    Vec3f linkPos = setup.pos;
-    f32 distToSign = Math_Vec3f_DistXZ(&signPos, &linkPos);
-    u16 yaw = Math_Vec3f_Yaw(&signPos, &linkPos);
+  auto filter = [&](Vec3f initialPos, u16 initialAngle,
+                    const PosAngleSetup& setup, const std::vector<Action>& path,
+                    int cost) {
+    Vec3f pos = setup.pos;
+    if (pos.x < -2040.0f || pos.z < 620.0f) {
+      // near entrance
+      Vec3f corner = {-2040, 0, 620};
+      f32 distToCorner = Math_Vec3f_DistXZ(&corner, &pos);
+      int minCostToCorner = ceilf(distToCorner / 12.75f);
+      if (cost + minCostToCorner > params.maxCost - 140) {
+        return false;
+      }
 
-    // Don't read sign
-    s16 relYawTowardsPlayer = yaw - 0xcaab;
-    if (distToSign <= 50.0f && (std::abs(relYawTowardsPlayer) < 0x2800 ||
-                                std::abs(relYawTowardsPlayer) > 0x5800)) {
-      return false;
-    }
+      Vec3f signPos = {-2557, 3, 486};
+      f32 distToSign = Math_Vec3f_DistXZ(&signPos, &pos);
+      u16 yaw = Math_Vec3f_Yaw(&signPos, &pos);
 
-    // Don't target sign
-    s16 yawFromLink = yaw - 0x8000 - setup.angle;
-    if (distToSign <= 70.0f && std::abs(yawFromLink) <= 0x2aaa) {
-      return false;
+      // Don't read sign
+      s16 relYawTowardsPlayer = yaw - 0xcaab;
+      if (distToSign <= 50.0f && (std::abs(relYawTowardsPlayer) < 0x2800 ||
+                                  std::abs(relYawTowardsPlayer) > 0x5800)) {
+        return false;
+      }
+
+      // Don't target sign
+      s16 yawFromLink = yaw - 0x8000 - setup.angle;
+      if (distToSign <= 70.0f && std::abs(yawFromLink) <= 0x2aaa) {
+        return false;
+      }
+    } else if (pos.z < 1800.0f) {
+      // not yet near foot of log
+      f32 distToLog = 1800.0f - pos.z;
+      int minCostToLog = ceilf(distToLog / 12.75f);
+      if (cost + minCostToLog > params.maxCost - 30) {
+        return false;
+      }
     }
 
     return true;
   };
 
-  auto output = [&](Vec3f initialPos, u16 initialAngle, Vec3f finalPos,
-                    u16 finalAngle, const std::vector<Action>& path, int cost) {
+  auto output = [&](Vec3f initialPos, u16 initialAngle,
+                    const PosAngleSetup& setup, const std::vector<Action>& path,
+                    int cost) {
     // On top of log toward seam is in the 0xc000-0xffff range
-    u16 diff = finalAngle - 0xc000;
+    u16 diff = setup.angle - 0xc000;
     int dir = (diff & 0xc000) >> 14;
 
     u16 angle;
     f32 xzSpeed;
     f32 ySpeed;
     if (dir == 1) {
-      angle = finalAngle - 0x4000;
+      angle = setup.angle - 0x4000;
       xzSpeed = 8.5f;
       ySpeed = 3.5f;
     } else if (dir == 2) {
-      angle = finalAngle + 0x8000;
+      angle = setup.angle + 0x8000;
       xzSpeed = 6.0f;
       ySpeed = 5.8f;
     } else if (dir == 3) {
-      angle = finalAngle + 0x4000;
+      angle = setup.angle + 0x4000;
       xzSpeed = 8.5f;
       ySpeed = 3.5f;
     } else {
@@ -178,13 +198,13 @@ void findSetups(Collision* col, int argc, char* argv[]) {
     }
 
     f32 finalHeight;
-    if (testJumpToSeam(col, finalPos, angle, xzSpeed, ySpeed, &finalHeight)) {
+    if (testJumpToSeam(col, setup.pos, angle, xzSpeed, ySpeed, &finalHeight)) {
       printf(
           "cost=%d startAngle=%04x startx=%.9g startz=%.9g angle=%04x x=%.9g "
           "(%08x) z=%.9g (%08x) finalHeight=%.9g actions=%s\n",
-          cost, initialAngle, initialPos.x, initialPos.z, finalAngle,
-          finalPos.x, floatToInt(finalPos.x), finalPos.z,
-          floatToInt(finalPos.z), finalHeight, actionNames(path).c_str());
+          cost, initialAngle, initialPos.x, initialPos.z, setup.angle,
+          setup.pos.x, floatToInt(setup.pos.x), setup.pos.z,
+          floatToInt(setup.pos.z), finalHeight, actionNames(path).c_str());
       fflush(stdout);
       return true;
     }
@@ -193,7 +213,7 @@ void findSetups(Collision* col, int argc, char* argv[]) {
 
   if (argc > 1) {
     int shard = atoi(argv[1]);
-    searchSetupsShard(params, 2, shard, filter, output);
+    searchSetupsShard(params, 1, shard, filter, output);
   } else {
     searchSetups(params, filter, output);
   }
