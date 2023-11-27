@@ -896,7 +896,7 @@ f32 Collision::cameraFindFloor(Vec3f pos, CollisionPoly** outPoly) {
   return floorHeight;
 }
 
-int Collision::getCameraSetting(CollisionPoly* poly, int dynaId) {
+u16 Collision::getCameraSetting(CollisionPoly* poly, int dynaId) {
   CollisionHeader* header;
   if (dynaId == -1) {
     header = this->header;

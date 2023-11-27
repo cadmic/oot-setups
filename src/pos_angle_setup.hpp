@@ -82,6 +82,7 @@ struct PosAngleSetup {
   CollisionPoly* floorPoly;
   int dynaId;
   // Camera data
+  u16 cameraSetting;
   bool cameraStable;
   u16 cameraAngle;
   // Wall interaction for targeting
