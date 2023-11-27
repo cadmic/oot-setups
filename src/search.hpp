@@ -151,9 +151,10 @@ void doSearch(const SearchParams& params, SearchState* state,
     }
 
     // TODO: generalize this and record entire position/angle history?
-    if (k > 0 &&
-        ((action == TURN_ESS_LEFT && state->path.back() == TURN_ESS_RIGHT) ||
-         (action == TURN_ESS_RIGHT && state->path.back() == TURN_ESS_LEFT))) {
+    if (k > 0 && ((action == TURN_1_ESS_LEFT &&
+                   state->path.back() == TURN_1_ESS_RIGHT) ||
+                  (action == TURN_1_ESS_RIGHT &&
+                   state->path.back() == TURN_1_ESS_LEFT))) {
       continue;
     }
 
