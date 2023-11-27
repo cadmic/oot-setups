@@ -306,13 +306,11 @@ void search(Collision* corridorCol, const PosAngleSetup& setup,
     if (testMegaflip(corridorCol, setup.col, setup.pos, setup.angle, false)) {
       found++;
 
-      printf("cost=%d angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x actions=",
-             actualCost(prefixCost, suffixCost), setup.angle, setup.pos.x,
-             setup.pos.z, floatToInt(setup.pos.x), floatToInt(setup.pos.z));
-      for (int i = 0; i < k; i++) {
-        printf("%s,", actionName((*actions)[i]));
-      }
-      printf("\n");
+      printf(
+          "cost=%d angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x actions=%s\n",
+          actualCost(prefixCost, suffixCost), setup.angle, setup.pos.x,
+          setup.pos.z, floatToInt(setup.pos.x), floatToInt(setup.pos.z),
+          actionNames(*actions).c_str());
       fflush(stdout);
       return;
     }

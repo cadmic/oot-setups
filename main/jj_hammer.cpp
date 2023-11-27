@@ -409,12 +409,8 @@ void findPosAngleSetups(Collision* col) {
               }
             }
 
-            printf("cost=%d startx=%.0f startAngle=%04x actions=", cost,
-                   initialPos.x, initialAngle);
-            for (Action action : actions) {
-              printf("%s,", actionName(action));
-            }
-            printf("\n");
+            printf("cost=%d startx=%.0f startAngle=%04x actions=%s\n", cost,
+                   initialPos.x, initialAngle, actionNames(actions).c_str());
             fflush(stdout);
           }
         }

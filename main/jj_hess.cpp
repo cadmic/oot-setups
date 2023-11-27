@@ -640,12 +640,9 @@ void searchSetups(Vec3f initialPos, u16 initialAngle, std::vector<int>* targets,
         for (const auto& result : *results) {
           printf(
               "cost=%d initialAngle=%04x initialx=%.0f initialz=%.0f "
-              "actions=",
-              cost, initialAngle, initialPos.x, initialPos.z);
-          for (int i = 0; i < actions->size(); i++) {
-            printf("%s,", actionName((*actions)[i]));
-          }
-          printf(" ");
+              "actions=%s ",
+              cost, initialAngle, initialPos.x, initialPos.z,
+              actionNames(*actions).c_str());
           printHessResult(result);
         }
       }
