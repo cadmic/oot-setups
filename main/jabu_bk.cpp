@@ -387,6 +387,11 @@ void findHessSetupPositions(Collision* col) {
 
 void testPosAngleSetup(Collision* col, Vec3f initialPos,
                        const std::vector<Action>& actions, bool debug) {
+  int cost = actionsCost(actions);
+  if (cost > 105) {
+    return;
+  }
+
   PosAngleSetup setup(col, initialPos, 0x8000, {-140, -340, -2415},
                       {80, -200, -1840});
   if (!setup.performActions(actions)) {
@@ -407,10 +412,10 @@ void testPosAngleSetup(Collision* col, Vec3f initialPos,
     for (int j = 0; j < setups.size(); j++) {
       if (testHessSetup(col, pos, angle, setups[j], essAngle, debug)) {
         printf(
-            "startx=%.9g x=%.9g z=%.9g x_raw=%08x z_raw=%08x essAngle=%04x "
-            "hessSetup=%d actions=",
-            initialPos.x, pos.x, pos.z, floatToInt(pos.x), floatToInt(pos.z),
-            essAngle, j);
+            "cost=%d startx=%.9g x=%.9g z=%.9g x_raw=%08x z_raw=%08x "
+            "essAngle=%04x hessSetup=%d actions=",
+            cost, initialPos.x, pos.x, pos.z, floatToInt(pos.x),
+            floatToInt(pos.z), essAngle, j);
         for (Action action : actions) {
           printf("%s,", actionName(action));
         }
@@ -428,7 +433,14 @@ void findPosAngleSetups(Collision* col) {
 
   // Idea: try permutations of angle setup, adding angle-preserving actions
   // in between
-  std::vector<Action> angleSetup = {BACKFLIP_SIDEROLL_UNTARGET, TURN_7_ESS_LEFT,
+  std::vector<Action> angleSetup = {BACKFLIP_SIDEROLL_UNTARGET,
+                                    ROTATE_ESS_LEFT,
+                                    ROTATE_ESS_LEFT,
+                                    ROTATE_ESS_LEFT,
+                                    ROTATE_ESS_LEFT,
+                                    ROTATE_ESS_LEFT,
+                                    ROTATE_ESS_LEFT,
+                                    ROTATE_ESS_LEFT,
                                     SHIELD_TURN_LEFT};
 
   std::vector<Action> addlActions = {
@@ -450,15 +462,14 @@ void findPosAngleSetups(Collision* col) {
           actions.push_back(addlActions[l]);
           std::sort(actions.begin(), actions.end());
           do {
-            if (numSetups % 1000 == 0) {
+            if (numSetups % 10000 == 0) {
               fprintf(stderr, "numSetups=%d i=%d j=%d k=%d l=%d\r", numSetups,
                       i, j, k, l);
             }
             numSetups++;
 
             // Ban some first actions
-            if (actions[0] == ROLL || actions[0] == TURN_1_ESS_LEFT ||
-                actions[0] == TURN_2_ESS_LEFT ||
+            if (actions[0] == ROLL || actions[0] == ROTATE_ESS_LEFT ||
                 actions[0] == SIDEHOP_RIGHT_SIDEROLL_UNTARGET) {
               continue;
             }

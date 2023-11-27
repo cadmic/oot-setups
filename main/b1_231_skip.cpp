@@ -562,12 +562,24 @@ void findPosAngleSetups(Collision* col) {
             } else {
               switch (k) {
                 case 0:
-                  actions.push_back(angleSetup ? SHIELD_TURN_LEFT
-                                               : TURN_4_ESS_LEFT);
+                  if (angleSetup) {
+                    actions.push_back(SHIELD_TURN_LEFT);
+                  } else {
+                    actions.push_back(ROTATE_ESS_LEFT);
+                    actions.push_back(ROTATE_ESS_LEFT);
+                    actions.push_back(ROTATE_ESS_LEFT);
+                    actions.push_back(ROTATE_ESS_LEFT);
+                  }
                   break;
                 case 1:
-                  actions.push_back(angleSetup ? TURN_4_ESS_LEFT
-                                               : SHIELD_TURN_LEFT);
+                  if (angleSetup) {
+                    actions.push_back(ROTATE_ESS_LEFT);
+                    actions.push_back(ROTATE_ESS_LEFT);
+                    actions.push_back(ROTATE_ESS_LEFT);
+                    actions.push_back(ROTATE_ESS_LEFT);
+                  } else {
+                    actions.push_back(SHIELD_TURN_LEFT);
+                  }
                   break;
                 case 2:
                   actions.push_back(SIDEHOP_LEFT);

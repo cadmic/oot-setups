@@ -16,8 +16,6 @@ const char* actionNames[] = {
 
 const char* actionName(Action action) { return actionNames[action]; }
 
-int essCost(int turns) { return turns + 6; }
-
 // TODO: make these numbers more principled
 int actionCost(Action action) {
   switch (action) {
@@ -68,27 +66,9 @@ int actionCost(Action action) {
     case CROUCH_STAB:
       return 8;
     case ESS_TURN_UP:
-    case TURN_1_ESS_LEFT:
-    case TURN_1_ESS_RIGHT:
-      return essCost(1);
-    case TURN_2_ESS_LEFT:
-    case TURN_2_ESS_RIGHT:
-      return essCost(2);
-    case TURN_3_ESS_LEFT:
-    case TURN_3_ESS_RIGHT:
-      return essCost(3);
-    case TURN_4_ESS_LEFT:
-    case TURN_4_ESS_RIGHT:
-      return essCost(4);
-    case TURN_5_ESS_LEFT:
-    case TURN_5_ESS_RIGHT:
-      return essCost(5);
-    case TURN_6_ESS_LEFT:
-    case TURN_6_ESS_RIGHT:
-      return essCost(6);
-    case TURN_7_ESS_LEFT:
-    case TURN_7_ESS_RIGHT:
-      return essCost(7);
+    case ROTATE_ESS_LEFT:
+    case ROTATE_ESS_RIGHT:
+      return 10;
     case ESS_TURN_LEFT:
     case ESS_TURN_RIGHT:
       return 16;
@@ -97,17 +77,33 @@ int actionCost(Action action) {
     case SHIELD_TURN_LEFT:
     case SHIELD_TURN_RIGHT:
     case SHIELD_TURN_DOWN:
-      return 8;
+      return 10;
   }
 
   return 0;
 }
 
-int actionsCost(const std::vector<Action>& actions) {
-  int cost = 0;
-  for (Action action : actions) {
-    cost += actionCost(action);
+int actionCost(Action prevAction, Action action) {
+  if ((prevAction == ROTATE_ESS_LEFT && action == ROTATE_ESS_LEFT) ||
+      (prevAction == ROTATE_ESS_RIGHT && action == ROTATE_ESS_RIGHT)) {
+    return 2;
   }
+  return actionCost(action);
+}
+
+int actionsCost(const std::vector<Action>& actions) {
+  if (actions.empty()) {
+    return 0;
+  }
+
+  int cost = actionCost(actions[0]);
+  Action prevAction = actions[0];
+
+  for (int i = 1; i < actions.size(); i++) {
+    cost += actionCost(prevAction, actions[i]);
+    prevAction = actions[i];
+  }
+
   return cost;
 }
 
@@ -201,15 +197,9 @@ bool PosAngleSetup::targetWall() {
   return true;
 }
 
-bool PosAngleSetup::essLeft(int n) {
+bool PosAngleSetup::rotateEss(int dir) {
   this->targeted = false;
-  this->angle += n * 0x708;
-  return true;
-}
-
-bool PosAngleSetup::essRight(int n) {
-  this->targeted = false;
-  this->angle -= n * 0x708;
+  this->angle += dir * 0x708;
   return true;
 }
 
@@ -620,34 +610,10 @@ bool PosAngleSetup::doAction(Action action) {
       return jumpslash(true, true);
     case CROUCH_STAB:
       return crouchStab();
-    case TURN_1_ESS_LEFT:
-      return essLeft(1);
-    case TURN_2_ESS_LEFT:
-      return essLeft(2);
-    case TURN_3_ESS_LEFT:
-      return essLeft(3);
-    case TURN_4_ESS_LEFT:
-      return essLeft(4);
-    case TURN_5_ESS_LEFT:
-      return essLeft(5);
-    case TURN_6_ESS_LEFT:
-      return essLeft(6);
-    case TURN_7_ESS_LEFT:
-      return essLeft(7);
-    case TURN_1_ESS_RIGHT:
-      return essRight(1);
-    case TURN_2_ESS_RIGHT:
-      return essRight(2);
-    case TURN_3_ESS_RIGHT:
-      return essRight(3);
-    case TURN_4_ESS_RIGHT:
-      return essRight(4);
-    case TURN_5_ESS_RIGHT:
-      return essRight(5);
-    case TURN_6_ESS_RIGHT:
-      return essRight(6);
-    case TURN_7_ESS_RIGHT:
-      return essRight(7);
+    case ROTATE_ESS_LEFT:
+      return rotateEss(1);
+    case ROTATE_ESS_RIGHT:
+      return rotateEss(-1);
     case ESS_TURN_UP:
       return cameraTurn(0x0000);
     case ESS_TURN_LEFT:
