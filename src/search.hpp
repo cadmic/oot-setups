@@ -33,8 +33,7 @@ struct SearchParams {
 // bool f(
 //     Vec3f initialPos,
 //     u16 initialAngle,
-//     Vec3f finalPos,
-//     u16 finalAngle,
+//     const PosAngleSetup& setup,
 //     const std::vector<Action>& actions,
 //     int cost);
 //
@@ -46,7 +45,12 @@ void searchSetups(const SearchParams& params, Output output);
 
 // Like above, but with an additional filter function with the signature
 //
-// bool f(const PosAngleSetup& setup)
+// bool f(
+//     Vec3f initialPos,
+//     u16 initialAngle,
+//     const PosAngleSetup& setup,
+//     const std::vector<Action>& actions,
+//     int cost);
 //
 // that returns false if the setup so far should be pruned.
 template <typename Filter, typename Output>
@@ -121,15 +125,6 @@ void doSearch(const SearchParams& params, SearchState* state,
     zDist = 0.0f;
   }
 
-  state->tested++;
-  if (inAngleRange && xDist == 0.0f && zDist == 0.0f) {
-    state->close++;
-    if (output(state->startPos, state->startAngle, setup.pos, setup.angle,
-               state->path, cost)) {
-      state->found++;
-    }
-  }
-
   // Estimate minimum cost to reach goal area. A sidehop moves 12.75 units per
   // frame.
   // TODO: estimate based on angle too?
@@ -138,8 +133,16 @@ void doSearch(const SearchParams& params, SearchState* state,
     return;
   }
 
-  if (!filter(setup)) {
+  if (!filter(state->startPos, state->startAngle, setup, state->path, cost)) {
     return;
+  }
+
+  state->tested++;
+  if (inAngleRange && xDist == 0.0f && zDist == 0.0f) {
+    state->close++;
+    if (output(state->startPos, state->startAngle, setup, state->path, cost)) {
+      state->found++;
+    }
   }
 
   int k = state->path.size();
@@ -199,7 +202,8 @@ void searchSetups(const SearchParams& params, Filter filter, Output output) {
 
 template <typename Output>
 void searchSetups(const SearchParams& params, Output output) {
-  auto filter = [](const PosAngleSetup&) { return true; };
+  auto filter = [](Vec3f, u16, const PosAngleSetup&, const std::vector<Action>&,
+                   int) { return true; };
   searchSetups(params, filter, output);
 }
 
@@ -248,6 +252,7 @@ void searchSetupsShard(const SearchParams& params, int depth, int shard,
 template <typename Output>
 void searchSetupsShard(const SearchParams& params, int depth, int shard,
                        Output output) {
-  auto filter = [](const PosAngleSetup&) { return true; };
+  auto filter = [](Vec3f, u16, const PosAngleSetup&, const std::vector<Action>&,
+                   int) { return true; };
   searchSetupsShard(params, depth, shard, filter, output);
 }
