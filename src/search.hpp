@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ctime>
+
 #include "pos_angle_setup.hpp"
 
 struct SearchParams {
