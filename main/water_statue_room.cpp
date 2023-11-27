@@ -239,15 +239,16 @@ void findPosAngleSetups(Collision* col, int argc, char* argv[]) {
           },
   };
 
-  auto output = [&](Vec3f initialPos, u16 initialAngle, Vec3f finalPos,
-                    u16 finalAngle, const std::vector<Action>& path, int cost) {
-    if (testMegaflip(finalPos, finalAngle, false)) {
+  auto output = [&](Vec3f initialPos, u16 initialAngle,
+                    const PosAngleSetup& setup, const std::vector<Action>& path,
+                    int cost) {
+    if (testMegaflip(setup.pos, setup.angle, false)) {
       printf(
           "cost=%d startAngle=%04x startx=%.9g startz=%.9g angle=%04x x=%.9g "
           "(%08x) z=%.9g (%08x) actions=%s\n",
-          cost, initialAngle, initialPos.x, initialPos.z, finalAngle,
-          finalPos.x, floatToInt(finalPos.x), finalPos.z,
-          floatToInt(finalPos.z), actionNames(path).c_str());
+          cost, initialAngle, initialPos.x, initialPos.z, setup.angle,
+          setup.pos.x, floatToInt(setup.pos.x), setup.pos.z,
+          floatToInt(setup.pos.z), actionNames(path).c_str());
       fflush(stdout);
       return true;
     }
