@@ -213,8 +213,8 @@ std::vector<Action> addlActions = {
     SIDEHOP_RIGHT,
     BACKFLIP,
     ESS_TURN_UP,
-    TURN_1_ESS_LEFT,
-    TURN_1_ESS_RIGHT,
+    ROTATE_ESS_LEFT,
+    ROTATE_ESS_RIGHT,
     SHIELD_TURN_LEFT,
     SHIELD_TURN_DOWN,
     SHIELD_TURN_RIGHT,
@@ -278,8 +278,8 @@ int actualCost(int prefixCost, int suffixCost) {
 bool isEssAction(Action action) {
   switch (action) {
     case ESS_TURN_UP:
-    case TURN_1_ESS_LEFT:
-    case TURN_1_ESS_RIGHT:
+    case ROTATE_ESS_LEFT:
+    case ROTATE_ESS_RIGHT:
     case SHIELD_TURN_LEFT:
     case SHIELD_TURN_DOWN:
     case SHIELD_TURN_RIGHT:
@@ -320,16 +320,16 @@ void search(Collision* corridorCol, const PosAngleSetup& setup,
 
   for (const Action action : addlActions) {
     if (k > 0 &&
-        ((action == TURN_1_ESS_LEFT && actions->back() == TURN_1_ESS_RIGHT) ||
-         (action == TURN_1_ESS_RIGHT && actions->back() == TURN_1_ESS_LEFT))) {
+        ((action == ROTATE_ESS_LEFT && actions->back() == ROTATE_ESS_RIGHT) ||
+         (action == ROTATE_ESS_RIGHT && actions->back() == ROTATE_ESS_LEFT))) {
       continue;
     }
 
     int newPrefixCost = prefixCost;
     int newSuffixCost = suffixCost;
     if (k > 0 &&
-        ((action == TURN_1_ESS_RIGHT && actions->back() == TURN_1_ESS_RIGHT) ||
-         (action == TURN_1_ESS_LEFT && actions->back() == TURN_1_ESS_LEFT))) {
+        ((action == ROTATE_ESS_RIGHT && actions->back() == ROTATE_ESS_RIGHT) ||
+         (action == ROTATE_ESS_LEFT && actions->back() == ROTATE_ESS_LEFT))) {
       newSuffixCost += 3;
     } else if (isEssAction(action)) {
       newSuffixCost += actionCost(action);

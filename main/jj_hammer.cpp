@@ -347,12 +347,12 @@ void findPosAngleSetups(Collision* col) {
 
   // face door, target
   u16 initialAngle = 0x8000;
-  std::vector<Action> angleSetup = {TURN_1_ESS_RIGHT, TURN_1_ESS_RIGHT,
-                                    TURN_1_ESS_RIGHT, TURN_1_ESS_RIGHT};
+  std::vector<Action> angleSetup = {ROTATE_ESS_RIGHT, ROTATE_ESS_RIGHT,
+                                    ROTATE_ESS_RIGHT, ROTATE_ESS_RIGHT};
 
   // face right wall, sidehop sideroll left
   // u16 initialAngle = 0x4000;
-  // std::vector<Action> angleSetup = {SIDEHOP_SIDEROLL_LEFT, TURN_1_ESS_LEFT};
+  // std::vector<Action> angleSetup = {SIDEHOP_SIDEROLL_LEFT, ROTATE_ESS_LEFT};
 
   std::vector<Action> addlActions = {
       ROLL,
@@ -401,8 +401,8 @@ void findPosAngleSetups(Collision* col) {
 
             int cost = 0;
             for (int i = 0; i < actions.size(); i++) {
-              if (i > 0 && actions[i] == TURN_1_ESS_RIGHT &&
-                  actions[i - 1] == TURN_1_ESS_RIGHT) {
+              if (i > 0 && actions[i] == ROTATE_ESS_RIGHT &&
+                  actions[i - 1] == ROTATE_ESS_RIGHT) {
                 cost += 1;
               } else {
                 cost += actionCost(actions[i]);

@@ -231,8 +231,8 @@ void findPosAngleSetups(Collision* col, int argc, char* argv[]) {
               FORWARD_STAB_SHIELD,
               CROUCH_STAB,
 
-              TURN_1_ESS_LEFT,
-              TURN_1_ESS_RIGHT,
+              ROTATE_ESS_LEFT,
+              ROTATE_ESS_RIGHT,
               SHIELD_TURN_LEFT,
               SHIELD_TURN_RIGHT,
               SHIELD_TURN_DOWN,

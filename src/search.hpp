@@ -151,14 +151,15 @@ void doSearch(const SearchParams& params, SearchState* state,
     }
 
     // TODO: generalize this and record entire position/angle history?
-    if (k > 0 && ((action == TURN_1_ESS_LEFT &&
-                   state->path.back() == TURN_1_ESS_RIGHT) ||
-                  (action == TURN_1_ESS_RIGHT &&
-                   state->path.back() == TURN_1_ESS_LEFT))) {
+    if (k > 0 && ((action == ROTATE_ESS_LEFT &&
+                   state->path.back() == ROTATE_ESS_RIGHT) ||
+                  (action == ROTATE_ESS_RIGHT &&
+                   state->path.back() == ROTATE_ESS_LEFT))) {
       continue;
     }
 
-    int newCost = cost + actionCost(action);
+    int newCost = cost + (k > 0 ? actionCost(state->path.back(), action)
+                                : actionCost(action));
     if (newCost > params.maxCost) {
       continue;
     }

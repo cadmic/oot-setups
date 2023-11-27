@@ -33,20 +33,8 @@
   X(JUMPSLASH_SHIELD)                \
   X(LONG_JUMPSLASH_SHIELD)           \
   X(CROUCH_STAB)                     \
-  X(TURN_1_ESS_LEFT)                 \
-  X(TURN_2_ESS_LEFT)                 \
-  X(TURN_3_ESS_LEFT)                 \
-  X(TURN_4_ESS_LEFT)                 \
-  X(TURN_5_ESS_LEFT)                 \
-  X(TURN_6_ESS_LEFT)                 \
-  X(TURN_7_ESS_LEFT)                 \
-  X(TURN_1_ESS_RIGHT)                \
-  X(TURN_2_ESS_RIGHT)                \
-  X(TURN_3_ESS_RIGHT)                \
-  X(TURN_4_ESS_RIGHT)                \
-  X(TURN_5_ESS_RIGHT)                \
-  X(TURN_6_ESS_RIGHT)                \
-  X(TURN_7_ESS_RIGHT)                \
+  X(ROTATE_ESS_LEFT)                 \
+  X(ROTATE_ESS_RIGHT)                \
   X(ESS_TURN_UP)                     \
   X(ESS_TURN_LEFT)                   \
   X(ESS_TURN_RIGHT)                  \
@@ -61,8 +49,17 @@ enum Action {
 #undef X
 };
 
+// Returns the name of the action.
 const char* actionName(Action action);
+
+// Returns the appoximate cost (in frames) of the action in isolation.
 int actionCost(Action action);
+
+// Returns the approximate cost (in frames) of the action given a previous
+// action.
+int actionCost(Action prevAction, Action action);
+
+// Returns the approximate cost (in frames) of the actions in sequence.
 int actionsCost(const std::vector<Action>& action);
 
 struct SwordSlash;
@@ -98,8 +95,7 @@ struct PosAngleSetup {
  private:
   bool ensureTargeted();
   bool targetWall();
-  bool essLeft(int n);
-  bool essRight(int n);
+  bool rotateEss(int dir);
   bool cameraTurn(u16 offset);
   bool settle();
   bool move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed, f32 ySpeed,
