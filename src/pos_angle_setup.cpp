@@ -243,7 +243,7 @@ bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
   this->pos =
       this->col->runChecks(prevPos, intendedPos, &wallPoly, &this->floorPoly,
                            &this->dynaId, &floorHeight);
-  *onGround = (this->pos.y <= floorHeight);
+  *onGround = ySpeed <= 0.0f && this->pos.y <= floorHeight;
 
   // Check bounds
   if (this->pos.x < this->minBounds.x || this->pos.x > this->maxBounds.x ||
