@@ -67,9 +67,9 @@ int actionCost(Action action) {
       return 24;
     case CROUCH_STAB:
       return 8;
-    case TURN_ESS_UP:
-    case TURN_ESS_LEFT:
-    case TURN_ESS_RIGHT:
+    case ESS_TURN_UP:
+    case TURN_1_ESS_LEFT:
+    case TURN_1_ESS_RIGHT:
       return essCost(1);
     case TURN_2_ESS_LEFT:
     case TURN_2_ESS_RIGHT:
@@ -89,9 +89,14 @@ int actionCost(Action action) {
     case TURN_7_ESS_LEFT:
     case TURN_7_ESS_RIGHT:
       return essCost(7);
-    case TURN_LEFT:
-    case TURN_RIGHT:
-    case TURN_DOWN:
+    case ESS_TURN_LEFT:
+    case ESS_TURN_RIGHT:
+      return 16;
+    case ESS_TURN_DOWN:
+      return 24;
+    case SHIELD_TURN_LEFT:
+    case SHIELD_TURN_RIGHT:
+    case SHIELD_TURN_DOWN:
       return 8;
   }
 
@@ -615,7 +620,7 @@ bool PosAngleSetup::doAction(Action action) {
       return jumpslash(true, true);
     case CROUCH_STAB:
       return crouchStab();
-    case TURN_ESS_LEFT:
+    case TURN_1_ESS_LEFT:
       return essLeft(1);
     case TURN_2_ESS_LEFT:
       return essLeft(2);
@@ -629,7 +634,7 @@ bool PosAngleSetup::doAction(Action action) {
       return essLeft(6);
     case TURN_7_ESS_LEFT:
       return essLeft(7);
-    case TURN_ESS_RIGHT:
+    case TURN_1_ESS_RIGHT:
       return essRight(1);
     case TURN_2_ESS_RIGHT:
       return essRight(2);
@@ -643,13 +648,16 @@ bool PosAngleSetup::doAction(Action action) {
       return essRight(6);
     case TURN_7_ESS_RIGHT:
       return essRight(7);
-    case TURN_ESS_UP:
+    case ESS_TURN_UP:
       return cameraTurn(0x0000);
-    case TURN_LEFT:
+    case ESS_TURN_LEFT:
+    case SHIELD_TURN_LEFT:
       return cameraTurn(0x4000);
-    case TURN_RIGHT:
+    case ESS_TURN_RIGHT:
+    case SHIELD_TURN_RIGHT:
       return cameraTurn(0xc000);
-    case TURN_DOWN:
+    case ESS_TURN_DOWN:
+    case SHIELD_TURN_DOWN:
       return cameraTurn(0x8000);
   }
   return false;

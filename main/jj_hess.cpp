@@ -595,12 +595,12 @@ std::vector<Action> addlActions = {
     SIDEHOP_LEFT,
     SIDEHOP_RIGHT,
     BACKFLIP,
-    TURN_ESS_UP,
-    TURN_ESS_LEFT,
-    TURN_ESS_RIGHT,
-    TURN_LEFT,
-    TURN_DOWN,
-    TURN_RIGHT,
+    ESS_TURN_UP,
+    TURN_1_ESS_LEFT,
+    TURN_1_ESS_RIGHT,
+    SHIELD_TURN_LEFT,
+    SHIELD_TURN_DOWN,
+    SHIELD_TURN_RIGHT,
 };
 
 unsigned long long tested = 0;
@@ -656,16 +656,16 @@ void searchSetups(Vec3f initialPos, u16 initialAngle, std::vector<int>* targets,
 
   for (const Action action : addlActions) {
     if (k > 0) {
-      if ((action == TURN_ESS_LEFT && actions->back() == TURN_ESS_RIGHT) ||
-          (action == TURN_ESS_RIGHT && actions->back() == TURN_ESS_LEFT)) {
+      if ((action == TURN_1_ESS_LEFT && actions->back() == TURN_1_ESS_RIGHT) ||
+          (action == TURN_1_ESS_RIGHT && actions->back() == TURN_1_ESS_LEFT)) {
         continue;
       }
     }
 
     int newCost = cost;
     if (k > 0 &&
-        ((action == TURN_ESS_RIGHT && actions->back() == TURN_ESS_RIGHT) ||
-         (action == TURN_ESS_LEFT && actions->back() == TURN_ESS_LEFT))) {
+        ((action == TURN_1_ESS_RIGHT && actions->back() == TURN_1_ESS_RIGHT) ||
+         (action == TURN_1_ESS_LEFT && actions->back() == TURN_1_ESS_LEFT))) {
       newCost += 1;
     } else {
       newCost += actionCost(action);

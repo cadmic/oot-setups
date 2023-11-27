@@ -33,24 +33,27 @@
   X(JUMPSLASH_SHIELD)                \
   X(LONG_JUMPSLASH_SHIELD)           \
   X(CROUCH_STAB)                     \
-  X(TURN_ESS_LEFT)                   \
+  X(TURN_1_ESS_LEFT)                 \
   X(TURN_2_ESS_LEFT)                 \
   X(TURN_3_ESS_LEFT)                 \
   X(TURN_4_ESS_LEFT)                 \
   X(TURN_5_ESS_LEFT)                 \
   X(TURN_6_ESS_LEFT)                 \
   X(TURN_7_ESS_LEFT)                 \
-  X(TURN_ESS_RIGHT)                  \
+  X(TURN_1_ESS_RIGHT)                \
   X(TURN_2_ESS_RIGHT)                \
   X(TURN_3_ESS_RIGHT)                \
   X(TURN_4_ESS_RIGHT)                \
   X(TURN_5_ESS_RIGHT)                \
   X(TURN_6_ESS_RIGHT)                \
   X(TURN_7_ESS_RIGHT)                \
-  X(TURN_ESS_UP)                     \
-  X(TURN_LEFT)                       \
-  X(TURN_RIGHT)                      \
-  X(TURN_DOWN)
+  X(ESS_TURN_UP)                     \
+  X(ESS_TURN_LEFT)                   \
+  X(ESS_TURN_RIGHT)                  \
+  X(ESS_TURN_DOWN)                   \
+  X(SHIELD_TURN_LEFT)                \
+  X(SHIELD_TURN_RIGHT)               \
+  X(SHIELD_TURN_DOWN)
 
 enum Action {
 #define X(name) name,
