@@ -190,19 +190,17 @@ void findMegaflips() {
 }
 
 void findPosAngleSetups(Collision* col) {
-  // door opening
-  Vec3f initialPos = {intToFloat(0xc534084f), 760, intToFloat(0xc33368f6)};
-  u16 initialAngle = 0xc000;
-
-  // corner
-  // Vec3f initialPos = {-2838, 760, -98};
-  // u16 initialAngle = 0x0000;
-
-  // corner
-  // Vec3f initialPos = {-2838, 760, -98};
-  // u16 initialAngle = 0x4000;
-
   SearchParams params = {
+      .col = col,
+      .minBounds = {-10000, 760, -10000},
+      .maxBounds = {10000, 10000, 10000},
+      .starts =
+          {
+              {{intToFloat(0xc534084f), 760, intToFloat(0xc33368f6)},
+               0xc000},                     // door
+              {{-2838, 760, -98}, 0x0000},  // corner
+              {{-2838, 760, -98}, 0x4000},  // corner
+          },
       .maxCost = 65,
       .angleMin = 0x03b8,
       .angleMax = 0x0d5f,
@@ -241,25 +239,26 @@ void findPosAngleSetups(Collision* col) {
           },
   };
 
-  PosAngleSetup start(col, initialPos, initialAngle, {-10000, 760, -10000},
-                      {10000, 10000, 10000});
-  searchSetups(
-      params, start,
-      [&](const PosAngleSetup& setup, const std::vector<Action>& path,
-          int cost) {
-        if (testMegaflip(setup.pos, setup.angle, false)) {
-          printf("cost=%d angle=%04x x=%.9g (%08x) z=%.9g (%08x) actions=",
-                 cost, setup.angle, setup.pos.x, floatToInt(setup.pos.x),
-                 setup.pos.z, floatToInt(setup.pos.z));
-          for (Action action : path) {
-            printf("%s,", actionName(action));
-          }
-          printf("\n");
-          fflush(stdout);
-          return true;
-        }
-        return false;
-      });
+  auto output = [&](Vec3f initialPos, u16 initialAngle, Vec3f finalPos,
+                    u16 finalAngle, const std::vector<Action>& path, int cost) {
+    if (testMegaflip(finalPos, finalAngle, false)) {
+      printf(
+          "cost=%d startAngle=%04x startx=%.9g startz=%.9g angle=%04x x=%.9g "
+          "(%08x) z=%.9g (%08x) actions=",
+          cost, initialAngle, initialPos.x, initialPos.z, finalAngle,
+          finalPos.x, floatToInt(finalPos.x), finalPos.z,
+          floatToInt(finalPos.z));
+      for (Action action : path) {
+        printf("%s,", actionName(action));
+      }
+      printf("\n");
+      fflush(stdout);
+      return true;
+    }
+    return false;
+  };
+
+  searchSetups(params, output);
 }
 
 int main(int argc, char* argv[]) {
