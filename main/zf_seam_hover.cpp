@@ -1,4 +1,7 @@
 #include "actor.hpp"
+#include "animation.hpp"
+#include "animation_data.hpp"
+#include "collider.hpp"
 #include "collision_data.hpp"
 #include "search.hpp"
 #include "sys_math.hpp"
@@ -219,6 +222,106 @@ void findSetups(Collision* col, int argc, char* argv[]) {
   }
 }
 
+// Experimentally-determined skulltula hitbox positions
+std::vector<Vec3s> skullPositions = {
+    {-1886, 200, 1909}, {-1886, 199, 1909}, {-1886, 199, 1910},
+    {-1886, 199, 1911}, {-1886, 200, 1911}, {-1887, 200, 1911},
+    {-1887, 201, 1911}, {-1887, 201, 1910}, {-1887, 201, 1909},
+    {-1887, 200, 1909},
+};
+
+Vec3f simulateHover(Collision* col, Vec3f pos, u16 angle, Vec3s skullPos,
+                    int shieldFrame, bool debug) {
+  f32 ySpeed = 5.8f;
+  for (int i = 0; i < 10; i++) {
+    Vec3f shieldCorners[4];
+    bool hitShield = false;
+
+    if (i >= shieldFrame) {
+      AnimFrame animFrame;
+      loadAnimFrame(gPlayerAnim_link_fighter_backturn_jump_Data, i, &animFrame);
+      // left stance
+      loadUpperBodyAnimFrame(gPlayerAnim_link_anchor_waitR2defense_Data, 2,
+                             &animFrame);
+
+      getShieldPosition(&animFrame, PLAYER_AGE_CHILD, pos, angle,
+                        shieldCorners);
+
+      Sphere16 skull = {skullPos, 21};
+      hitShield = colliderSphVsQuad(&skull, shieldCorners);
+    }
+
+    if (debug) {
+      printf(
+          "i=%d x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) "
+          "ySpeed=%.1f hitShield=%d\n",
+          i, pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z,
+          floatToInt(pos.z), ySpeed, hitShield);
+      for (int j = 0; j < 4; j++) {
+        printf("  shieldCorners[%d]: x=%.9g y=%.9g z=%.9g\n", j,
+               shieldCorners[j].x, shieldCorners[j].y, shieldCorners[j].z);
+      }
+    }
+
+    if (hitShield) {
+      return pos;
+    }
+
+    ySpeed -= 1.0f;
+    pos = col->runChecks(pos, translate(pos, angle + 0x8000, 6.0f, ySpeed));
+  }
+
+  return Vec3f();
+}
+
+void simulateHovers(Collision* col, Vec3f pos, u16 angle, int shieldFrame) {
+  for (Vec3s skullPos : skullPositions) {
+    Vec3f result = simulateHover(col, pos, angle, skullPos, shieldFrame, false);
+    printf(
+        "  shieldFrame=%d skullPos: x=%d y=%d z=%d result: x=%.9g (%08x) "
+        "y=%.9g (%08x) z=%.9g (%08x)\n",
+        shieldFrame, skullPos.x, skullPos.y, skullPos.z, result.x,
+        floatToInt(result.x), result.y, floatToInt(result.y), result.z,
+        floatToInt(result.z));
+  }
+}
+
+void testHovers(Collision* col) {
+  printf("hover 1\n");
+  simulateHovers(
+      col,
+      {intToFloat(0xc4e3acd8), intToFloat(0x42bf8bfe), intToFloat(0x44f04acd)},
+      0x48d8, 0);
+
+  printf("hover 2\n");
+  simulateHovers(
+      col,
+      {intToFloat(0xc4e793a2), intToFloat(0x42e72596), intToFloat(0x44f13def)},
+      0x48d8, 0);
+
+  printf("hover 3\n");
+  simulateHovers(
+      col,
+      {intToFloat(0xc4e80c96), intToFloat(0x43075f97), intToFloat(0x44f1d6c8)},
+      0x48d8, 0);
+
+  printf("hover 4 (lower height)\n");
+  for (int shieldFrame = 0; shieldFrame <= 5; shieldFrame++) {
+    simulateHovers(col,
+                   {intToFloat(0xc4e86b96), intToFloat(0x430e92ca),
+                    intToFloat(0x44f1ff4d)},
+                   0x48d8, shieldFrame);
+  }
+
+  printf("hover 4 (upper height)\n");
+  for (int shieldFrame = 0; shieldFrame <= 5; shieldFrame++) {
+    simulateHovers(col,
+                   {intToFloat(0xc4e8bc0b), intToFloat(0x431445fd),
+                    intToFloat(0x44f22628)},
+                   0x48d8, shieldFrame);
+  }
+}
+
 int main(int argc, char* argv[]) {
   Collision col(&spot08_sceneCollisionHeader_002CE0, PLAYER_AGE_CHILD);
   std::vector<int> polys = {
@@ -256,7 +359,9 @@ int main(int argc, char* argv[]) {
   // printSeamJumps(&col, 8.5f, 3.5f);  // sidehop
   // printSeamJumps(&col, 6.0f, 5.8f);  // backflip
 
-  findSetups(&col, argc, argv);
+  // findSetups(&col, argc, argv);
+
+  testHovers(&col);
 
   return 0;
 }
