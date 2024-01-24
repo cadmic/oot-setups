@@ -396,7 +396,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
 
   PlayerAge age = this->col->age;
 
-  Vec3f prevRoot = baseRootTranslation(this->angle);
+  Vec3f prevRoot = baseRootTranslation(PLAYER_AGE_CHILD, this->angle);
   Vec3f prevPos = this->pos;
   f32 speed = 0.0f;
 
@@ -404,7 +404,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
   f32 curFrame = 0;
   do {
     loadAnimFrame(slash.startAnimData, curFrame, &animFrame);
-    updateRootTranslation(&animFrame, age, &this->pos, this->angle, &prevRoot);
+    updateRootTranslation(&animFrame, &this->pos, this->angle, &prevRoot);
 
     bool swordHit = false;
     if (curFrame >= 2) {
@@ -442,7 +442,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
   curFrame = 0.0f;
   do {
     loadAnimFrame(slash.endAnimData, curFrame, &animFrame);
-    updateRootTranslation(&animFrame, age, &this->pos, this->angle, &prevRoot);
+    updateRootTranslation(&animFrame, &this->pos, this->angle, &prevRoot);
 
     if (!moveOnGround(prevPos, this->angle, speed, -5.0f)) {
       return false;

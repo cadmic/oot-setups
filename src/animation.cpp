@@ -137,18 +137,21 @@ void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
   Matrix_Pop();
 }
 
-Vec3f baseRootTranslation(u16 angle) { return rotate({-57, 3377, 0}, angle); }
-
-void updateRootTranslation(AnimFrame* animFrame, PlayerAge age, Vec3f* pos,
-                           u16 angle, Vec3f* prevRootTranslation) {
+Vec3f baseRootTranslation(PlayerAge age, u16 angle) {
   f32 ageScale = age == PLAYER_AGE_CHILD ? (11.0f / 17.0f) : 1.0f;
+  Vec3s baseTranslation = (Vec3f(-57, 3377, 0) * ageScale).toVec3s();
+  return rotate(baseTranslation, angle);
+}
+
+void updateRootTranslation(AnimFrame* animFrame, Vec3f* pos, u16 angle,
+                           Vec3f* prevRootTranslation) {
   Vec3f root = rotate(animFrame->jointTable[0], angle);
   Vec3f diff = root - *prevRootTranslation;
   diff.y = 0.0f;
 
   animFrame->jointTable[0].x = -57;
   animFrame->jointTable[0].z = 0;
-  *pos = *pos + diff * ageScale * 0.01f;
+  *pos = *pos + diff * 0.01f;
   *prevRootTranslation = root;
 }
 

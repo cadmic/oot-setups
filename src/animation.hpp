@@ -51,13 +51,13 @@ void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
                     MtxF* outLimbMatrices);
 
 // Default root translation for Link's skeleton.
-Vec3f baseRootTranslation(u16 angle);
+Vec3f baseRootTranslation(PlayerAge age, u16 angle);
 
-// Update Link's position based on the animation and previous root translation.
-// This update the Link's position, the previous root translation, and reset the
-// xz root translation in the animation frame.
-void updateRootTranslation(AnimFrame* animFrame, PlayerAge age, Vec3f* pos,
-                           u16 angle, Vec3f* prevRootTranslation);
+// Update Link's position, update the previous root translation, and reset the
+// xz root translation in the animation based on the animation and previous root
+// translation.
+void updateRootTranslation(AnimFrame* animFrame, Vec3f* pos, u16 angle,
+                           Vec3f* prevRootTranslation);
 
 // Compute held actor position, halfway between Link's hands.
 Vec3f heldActorPosition(AnimFrame* animFrame, PlayerAge age, Vec3f pos,
