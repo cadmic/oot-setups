@@ -350,7 +350,7 @@ f32 Math_FAtanTaylorQF(f32 x) {
   f32 poly = x;
   f32 sq = SQ(x);
   f32 exp = x * sq;
-  const f32* c = coeffs;
+  const f32 *c = coeffs;
   f32 term;
 
   while (true) {
@@ -480,14 +480,14 @@ f32 Math_FAsinF(f32 x) { return Math_FAtan2F(x, sqrtf(1.0f - SQ(x))); }
  */
 f32 Math_FAcosF(f32 x) { return M_PI / 2 - Math_FAsinF(x); }
 
-f32 Math_Vec3f_DistXZ(Vec3f* a, Vec3f* b) {
+f32 Math_Vec3f_DistXZ(Vec3f *a, Vec3f *b) {
   f32 dx = b->x - a->x;
   f32 dz = b->z - a->z;
 
   return sqrtf(SQ(dx) + SQ(dz));
 }
 
-u16 Math_Vec3f_Yaw(Vec3f* a, Vec3f* b) {
+u16 Math_Vec3f_Yaw(Vec3f *a, Vec3f *b) {
   f32 dx = b->x - a->x;
   f32 dz = b->z - a->z;
 
@@ -495,11 +495,45 @@ u16 Math_Vec3f_Yaw(Vec3f* a, Vec3f* b) {
 }
 
 /**
+ * Changes pValue by step towards target. If step is more than fraction of the
+ * remaining distance, step by that instead.
+ */
+void Math_ApproachF(f32 *pValue, f32 target, f32 fraction, f32 step) {
+  if (*pValue != target) {
+    f32 stepSize = (target - *pValue) * fraction;
+
+    if (stepSize > step) {
+      stepSize = step;
+    } else if (stepSize < -step) {
+      stepSize = -step;
+    }
+
+    *pValue += stepSize;
+  }
+}
+
+/**
+ * Changes pValue by step towards zero. If step is more than fraction of the
+ * remaining distance, step by that instead.
+ */
+void Math_ApproachZeroF(f32 *pValue, f32 fraction, f32 step) {
+  f32 stepSize = *pValue * fraction;
+
+  if (stepSize > step) {
+    stepSize = step;
+  } else if (stepSize < -step) {
+    stepSize = -step;
+  }
+
+  *pValue -= stepSize;
+}
+
+/**
  * Changes pValue by step (scaled by the update rate) towards target, setting it
  * equal when the target is reached. Returns true when target is reached, false
  * otherwise.
  */
-bool Math_ScaledStepToS(u16* pValue, u16 target, s16 step) {
+bool Math_ScaledStepToS(u16 *pValue, u16 target, s16 step) {
   // Rewritten to use u16 (since this is mostly used for angles) and to avoid
   // undefined behavior.
   if (step != 0) {
@@ -534,7 +568,7 @@ bool Math_ScaledStepToS(u16* pValue, u16 target, s16 step) {
  * Changes pValue by step towards target, setting it equal when the target is
  * reached. Returns true when target is reached, false otherwise.
  */
-bool Math_StepToF(f32* pValue, f32 target, f32 step) {
+bool Math_StepToF(f32 *pValue, f32 target, f32 step) {
   if (step != 0.0f) {
     if (target < *pValue) {
       step = -step;
