@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <cstring>
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#define ARRAY_COUNT(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #undef M_PI
 #define M_PI 3.14159265358979323846f

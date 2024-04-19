@@ -296,7 +296,7 @@ void computeSetupAction(SetupAction* action) {
 std::vector<SetupAction> computeSetupActions() {
   std::vector<SetupAction> setupActions;
 
-  for (int i = 0; i < ARRAY_SIZE(possibleActions); i++) {
+  for (int i = 0; i < ARRAY_COUNT(possibleActions); i++) {
     for (int angle = 0; angle < 0x10000; angle += 0x4000) {
       SetupAction action;
       action.action = possibleActions[i];
