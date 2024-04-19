@@ -96,7 +96,8 @@ struct Collision {
   // Add a poly
   void addPoly(int polyIndex);
 
-  void addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot, Vec3f pos);
+  int addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot, Vec3f pos);
+  void updateDynapoly(int dynaId, CollisionHeader* header, Vec3f scale, Vec3s rot, Vec3f pos);
 
   // TODO: these functions need better names and more consistency
 

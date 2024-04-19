@@ -759,13 +759,28 @@ void Collision::addPoly(int polyIndex) {
   }
 }
 
-void Collision::addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot,
+int Collision::addDynapoly(CollisionHeader* header, Vec3f scale, Vec3s rot,
                             Vec3f pos) {
   this->dynas.push_back(Dyna());
-  Dyna* dyna = &this->dynas.back();
+  int dynaId = this->dynas.size() - 1;
+  updateDynapoly(dynaId, header, scale, rot, pos);
+  return dynaId;
+}
+
+void Collision::updateDynapoly(int dynaId, CollisionHeader* header, Vec3f scale, Vec3s rot,
+                            Vec3f pos) {
+  Dyna* dyna = &this->dynas[dynaId];
   dyna->header = header;
+
+  dyna->vertices.clear();
   dyna->vertices.reserve(header->numVertices);
+
+  dyna->polys.clear();
   dyna->polys.reserve(header->numPolys);
+
+  dyna->floors.clear();
+  dyna->walls.clear();
+  dyna->ceilings.clear();
 
   MtxF mtx;
   SkinMatrix_SetTranslateRotateYXZScale(&mtx, scale.x, scale.y, scale.z, rot.x,
