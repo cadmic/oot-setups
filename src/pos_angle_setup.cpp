@@ -295,7 +295,7 @@ bool PosAngleSetup::roll(u16 movementAngle, bool untarget) {
     Math_ScaledStepToS(&movementAngle, facingAngle, 2000);
     Math_ScaledStepToS(&facingAngle, movementAngle, 2000);
 
-    // 1 frame of 2 speed, 10 frames of 3 speed, 1 frame of 0 speed
+    // 1 frame of 2 speed, 10 frames of 3 speed
     f32 xzSpeed;
     if (i < 1) {
       xzSpeed = 2.0f;
@@ -324,13 +324,14 @@ bool PosAngleSetup::longRoll() {
     return false;
   }
 
+  f32 maxSpeed = this->col->age == PLAYER_AGE_CHILD ? 8.25f : 9.0f;
+  f32 xzSpeed = 0.0f;
   for (int i = 0; i < 12; i++) {
     // 11 frames of roll up to 9 speed, 1 frame of 1 speed
-    f32 xzSpeed = 0.0f;
     if (i < 11) {
-      xzSpeed = std::min(xzSpeed + 2.0f, 9.0f);
+      xzSpeed = std::min(xzSpeed + 2.0f, maxSpeed);
     } else {
-      xzSpeed = 1.0f;
+      xzSpeed = maxSpeed - 8.0f;
     }
 
     // TODO: don't bonk
