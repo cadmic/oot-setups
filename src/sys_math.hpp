@@ -2,6 +2,9 @@
 
 #include "global.hpp"
 
+s16 sins(u16 angle);
+s16 coss(u16 angle);
+
 f32 Math_SinS(s16 angle);
 f32 Math_CosS(s16 angle);
 u16 Math_Atan2S(f32 x, f32 y);
