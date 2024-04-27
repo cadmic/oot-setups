@@ -1,7 +1,7 @@
 #include "actor.hpp"
 #include "collision_data.hpp"
 
-CamData gIngoGateColCamDataList[] = {
+BgCamInfo gIngoGateColCamDataList[] = {
     {0x0000, 0, NULL},
 };
 

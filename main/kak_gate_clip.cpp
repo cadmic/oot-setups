@@ -7,7 +7,7 @@
 #include "search.hpp"
 #include "sys_math.hpp"
 
-CamData gKakarikoGuardGateColCamDataList[] = {
+BgCamInfo gKakarikoGuardGateColCamDataList[] = {
     {0x0000, 0, NULL},
 };
 

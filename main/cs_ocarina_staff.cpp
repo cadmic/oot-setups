@@ -103,7 +103,7 @@ void findBomb1Setups(int argc, char* argv[]) {
   }
 }
 
-CamData gDTWebFloorColCamDataList[] = {
+BgCamInfo gDTWebFloorColCamDataList[] = {
     { 0x0000, 0, NULL },
 };
 

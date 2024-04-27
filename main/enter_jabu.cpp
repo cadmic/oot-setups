@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 }
 
 // Collision
-CamData gZorasFountainIceRampColCamDataList[] = {
+BgCamInfo gZorasFountainIceRampColCamDataList[] = {
     {0x0000, 0, NULL},
 };
 

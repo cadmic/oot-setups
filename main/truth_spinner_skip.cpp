@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-CamData object_haka_objects_Col_00A938CamDataList[] = {
+BgCamInfo object_haka_objects_Col_00A938CamDataList[] = {
     {0x0000, 0, NULL},
 };
 

@@ -29,7 +29,7 @@ struct SurfaceType {
   u32 data[2];
 };
 
-struct CamData {
+struct BgCamInfo {
   u16 setting;
   s16 count;
   Vec3s* bgCamFuncData;
@@ -52,7 +52,7 @@ struct CollisionHeader {
   u16 numPolys;
   CollisionPoly* polys;
   SurfaceType* surfaceTypeList;
-  CamData* bgCamList;
+  BgCamInfo* bgCamList;
   u16 numWaterBoxes;
   WaterBox* waterBoxes;
 };
