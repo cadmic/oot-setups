@@ -33,6 +33,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 
 typedef float f32;
+typedef double f64;
 
 struct MtxF {
   // Note: The order displayed here is the transpose of the order in which
