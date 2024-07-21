@@ -614,6 +614,10 @@ bool BgCheck_RaycastDownDynaList(Collision* col, Dyna* dyna,
     CollisionPoly_GetVertices(poly, dyna->vertices.data(), polyVerts);
     Vec3f normal = CollisionPoly_GetNormalF(poly);
 
+    if (normal.y < 0.0f) {
+      continue;
+    }
+
     f32 yIntersect;
     if (Math3D_TriChkPointParaYIntersectDist(
             &polyVerts[0], &polyVerts[1], &polyVerts[2], normal.x, normal.y,

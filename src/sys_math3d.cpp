@@ -1092,8 +1092,8 @@ s32 Math3D_TriChkPointParaYImpl(Vec3f* v0, Vec3f* v1, Vec3f* v2, f32 z, f32 x,
   detv1v2 = ((v1->z - z) * (v2->x - x)) - ((v1->x - x) * (v2->z - z));
   detv2v0 = ((v2->z - z) * (v0->x - x)) - ((v2->x - x) * (v0->z - z));
 
-  if (((detMax >= detv0v1) && (detMax >= detv1v2) && (detMax >= detv2v0)) ||
-      ((-detMax <= detv0v1) && (-detMax <= detv1v2) && (-detMax <= detv2v0))) {
+  if ((detv0v1 <= detMax && detv1v2 <= detMax && detv2v0 <= detMax) ||
+      (detv0v1 >= -detMax && detv1v2 >= -detMax && detv2v0 >= -detMax)) {
     return true;
   }
 
