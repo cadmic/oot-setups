@@ -1,6 +1,12 @@
+DEBUG := 0
 CXX := clang++
-# TODO: add easy debug mode
-CFLAGS := -Isrc -Wall -std=c++17 -g -O3 -flto
+CFLAGS := -Isrc -Wall -std=c++17
+
+ifeq ($(DEBUG),1)
+	CFLAGS += -g
+else
+	CFLAGS += -O3 -flto
+endif
 
 HEADERS := $(wildcard src/*.hpp)
 SRC_OBJECTS := $(patsubst %.cpp, %.o, $(wildcard src/*.cpp))
