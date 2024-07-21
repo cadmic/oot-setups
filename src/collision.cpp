@@ -614,6 +614,7 @@ bool BgCheck_RaycastDownDynaList(Collision* col, Dyna* dyna,
     CollisionPoly_GetVertices(poly, dyna->vertices.data(), polyVerts);
     Vec3f normal = CollisionPoly_GetNormalF(poly);
 
+    // BGCHECK_RAYCAST_DOWN_CHECK_GROUND_ONLY
     if (normal.y < 0.0f) {
       continue;
     }
@@ -642,11 +643,15 @@ bool BgCheck_RaycastDownDyna(Collision* col, Vec3f pos, f32* floorHeight,
       result = true;
     }
 
-    if (BgCheck_RaycastDownDynaList(col, dyna, &dyna->walls, pos, floorHeight,
-                                    floorPoly)) {
-      *dynaId = i;
-      result = true;
-    }
+    // TODO: With BGCHECK_RAYCAST_DOWN_CHECK_WALLS_SIMPLE, dynapoly walls are
+    // only checked if there is no floor detected i.e. we're over the void. This
+    // is pretty rare but maybe it will be needed someday.
+
+    // if (BgCheck_RaycastDownDynaList(col, dyna, &dyna->walls, pos, floorHeight,
+    //                                 floorPoly)) {
+    //   *dynaId = i;
+    //   result = true;
+    // }
   }
   return result;
 }
