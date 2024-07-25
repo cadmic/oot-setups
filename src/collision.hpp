@@ -6,6 +6,7 @@
 #include "skin_matrix.hpp"
 
 #define BGCHECK_Y_MIN -32000
+#define COLPOLY_NORMAL_FRAC (1.0f / SHT_MAX)
 
 // https://wiki.cloudmodding.com/oot/Collision_Mesh_Format and z64bgcheck.h
 struct CollisionPoly {

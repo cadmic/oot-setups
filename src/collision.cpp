@@ -6,9 +6,6 @@
 #include "skin_matrix.hpp"
 #include "sys_math3d.hpp"
 
-#define COLPOLY_NORMAL_FRAC (1.0f / SHT_MAX)
-#define COLPOLY_SNORMAL(x) ()
-
 void CollisionPoly_GetVertices(CollisionPoly* poly, Vec3s* vtxList,
                                Vec3f* dest) {
   dest[0] = vtxList[poly->v1 & 0x1FFF];
@@ -179,8 +176,8 @@ bool BgCheck_CheckLineImpl(Collision* col, Vec3f posPrev, Vec3f posNext,
   if (checkDyna) {
     for (int i = 0; i < col->dynas.size(); i++) {
       Dyna* dyna = &col->dynas[i];
-      if (posA.y < dyna->minY || posA.y > dyna->maxY || posB.y < dyna->minY ||
-          posB.y > dyna->maxY) {
+
+      if ((posA.y < dyna->minY && posB.y < dyna->minY) || (posA.y > dyna->maxY && posB.y > dyna->maxY)) {
         continue;
       }
 
