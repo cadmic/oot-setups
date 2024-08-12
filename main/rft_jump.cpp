@@ -1,6 +1,7 @@
 #include "actor.hpp"
 #include "animation.hpp"
 #include "animation_data.hpp"
+#include "camera_angles.hpp"
 #include "collision.hpp"
 #include "collision_data.hpp"
 #include "search.hpp"
@@ -167,10 +168,11 @@ void findJumpSpots(Collision* col) {
   }
 }
 
-bool simulateRoll(Collision* col, Vec3f pos, u16 facingAngle, int rollDir, Vec3f* outPos, bool debug) {
+bool simulateRoll(Collision* col, Vec3f pos, u16 facingAngle, Vec3f* outPos, bool debug) {
   f32 xzSpeed = 0.0f;
-  u16 angle = facingAngle + 0x8000 - 0xbb8 * rollDir;
+  u16 angle = cameraAngles[facingAngle] + 0x8000;
   bool jump = false;
+  Math_ScaledStepToS(&angle, facingAngle, 2000);
 
   for (int i = 0; i < 11; i++) {
     xzSpeed = std::min(xzSpeed + 2.0f, 8.25f);
@@ -220,11 +222,12 @@ bool simulateRoll(Collision* col, Vec3f pos, u16 facingAngle, int rollDir, Vec3f
   return true;
 }
 
-bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int rollDir, int releaseDownFrame, int jsFrame, bool debug) {
+bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFrame, int jsFrame, bool debug) {
   f32 xzSpeed = 5.5f;
   f32 ySpeed = 7.5f;
-  u16 angle = facingAngle + 0x8000 - 0xbb8 * rollDir;
+  u16 angle = cameraAngles[facingAngle] + 0x8000;
   f32 animFrameNum = 0.0f;
+  Math_ScaledStepToS(&angle, facingAngle, 2000);
   Math_ScaledStepToS(&angle, facingAngle + 0x8000, 200);
 
   AnimFrame animFrame;
@@ -319,7 +322,7 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int rollDir, int r
   }
 
   // Simulate ground clip
-  pos.y -= 0.0001f;
+  // pos.y -= 0.0001f;
 
   Vec3f prevRoot = baseRootTranslation(PLAYER_AGE_CHILD, angle);
   Vec3f prevPos = pos;
@@ -351,55 +354,39 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int rollDir, int r
 
 void findClips(Collision* col) {
   PosAngleRange range = {
-      .angleMin = 0x1800,
-      .angleMax = 0x6800,
-      .angleStep = 0x80,
-      .xMin = 786.0f, // edge: 786
+      .angleMin = 0x3000,
+      .angleMax = 0x3200,
+      .angleStep = 0x1,
+      .xMin = 820.0f, // edge: 786
       .xMax = 850.0f, // edge: 850
-      .xStep = 1.0f,
+      .xStep = 0.01f,
       .zMin = 2.0f, // edge: 2
-      .zMax = 157.0f, // edge: 157
-      .zStep = 1.0f,
+      .zMax = 7.0f, // edge: 157
+      .zStep = 0.1f,
   };
 
   searchPosAngleRange(range, [=](u16 angle, f32 x, f32 z) {
+    if (angle != cameraAngles[angle]) {
+      return false;
+    }
+
     Vec3f startPos = col->findFloor({x, 500.0f, z});
     if (startPos.y < 250) {
       return false;
     }
 
-    bool found = false;
-    for (int rollDir : {-1, 1}) {
-      for (int releaseDownFrame = 2; releaseDownFrame <= 7; releaseDownFrame++) {
-        int minJsFrame = -1;
-        int maxJsFrame = -1;
-
-        for (int jsFrame = 8; jsFrame <= 14; jsFrame++) {
-          Vec3f pos;
-          if (!simulateRoll(col, startPos, angle, rollDir, &pos, false)) {
-            continue;
-          }
-          if (!simulateClip(col, pos, angle, rollDir, releaseDownFrame, jsFrame, false)) {
-            continue;
-          }
-
-          if (minJsFrame == -1) {
-            minJsFrame = jsFrame;
-          }
-          maxJsFrame = jsFrame;
-        }
-
-        if (minJsFrame != -1) {
-          printf("angle=%04x x=%.9g x_raw=%08x y=%.9g y_raw=%08x z=%.9g z_raw=%08x rollDir=%d releaseDown=%d minJsFrame=%d maxJsFrame=%d jsFrames=%d\n",
-              angle, startPos.x, floatToInt(startPos.x), startPos.y, floatToInt(startPos.y), startPos.z, floatToInt(startPos.z),
-              rollDir, releaseDownFrame, minJsFrame, maxJsFrame, maxJsFrame - minJsFrame + 1);
-          fflush(stdout);
-          found = true;
-          break;
-        }
-      }
+    Vec3f pos;
+    if (!simulateRoll(col, startPos, angle, &pos, false)) {
+      return false;
     }
-    return found;
+    if (!simulateClip(col, pos, angle, 7, 10, false)) {
+      return false;
+    }
+
+    printf("angle=%04x x=%.9g x_raw=%08x y=%.9g y_raw=%08x z=%.9g z_raw=%08x\n",
+        angle, startPos.x, floatToInt(startPos.x), startPos.y, floatToInt(startPos.y), startPos.z, floatToInt(startPos.z));
+    fflush(stdout);
+    return true;
   });
 }
 
@@ -423,11 +410,10 @@ int main(int argc, char* argv[]) {
 
   // findJumpSpots(&col);
 
-  // angle=5b80 x=848 x_raw=44540000 y=288.211761 y_raw=43901b1b z=46 z_raw=42380000 rollDir=-1 releaseDown=7 minJsFrame=10 maxJsFrame=10 jsFrames=1
-  // Vec3f pos = {intToFloat(0x44540000), intToFloat(0x43901b1b), intToFloat(0x42380000)};
-  // u16 angle = 0x5b80;
-  // simulateRoll(&col, pos, angle, -1, &pos, true);
-  // simulateClip(&col, pos, angle, -1, 7, 10, true);
+  // Vec3f pos = {intToFloat(0x444e0000), intToFloat(0x438f84f1), intToFloat(0x40400000)};
+  // u16 angle = 0x310c;
+  // simulateRoll(&col, pos, angle, &pos, true);
+  // simulateClip(&col, pos, angle, 7, 10, true);
 
   findClips(&col);
 }
