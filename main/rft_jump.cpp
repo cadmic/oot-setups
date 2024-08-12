@@ -3,6 +3,7 @@
 #include "animation_data.hpp"
 #include "collision.hpp"
 #include "collision_data.hpp"
+#include "search.hpp"
 #include "sys_math.hpp"
 #include "sys_math3d.hpp"
 
@@ -166,11 +167,65 @@ void findJumpSpots(Collision* col) {
   }
 }
 
-bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFrame, int jsFrame, bool debug) {
-  f32 xzSpeed = 8.25f;
-  f32 ySpeed = -4.0f;
-  u16 angle = facingAngle + 0x8000 - 0xbb8;
+bool simulateRoll(Collision* col, Vec3f pos, u16 facingAngle, int rollDir, Vec3f* outPos, bool debug) {
+  f32 xzSpeed = 0.0f;
+  u16 angle = facingAngle + 0x8000 - 0xbb8 * rollDir;
+  bool jump = false;
+
+  for (int i = 0; i < 11; i++) {
+    xzSpeed = std::min(xzSpeed + 2.0f, 8.25f);
+
+    if (debug) {
+      printf(
+          "i=%02d angle=%04x x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) "
+          "xzSpeed=%.2f\n",
+          i, angle, pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z,
+          floatToInt(pos.z), xzSpeed);
+    }
+
+    pos = translate(pos, angle, xzSpeed, -5.0f);
+
+    Vec3f floorPos = col->findFloor({pos.x, pos.y + 50.0f, pos.z});
+    if (floorPos.y < 250) {
+      jump = true;
+      break;
+    }
+    pos = floorPos;
+  }
+
+  if (!jump) {
+    if (debug) {
+      printf("no jump\n");
+    }
+    return false;
+  }
+
+  if (debug) {
+    printf("jump x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x)\n",
+           pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z,
+           floatToInt(pos.z));
+  }
+
+  if (xzSpeed < 6.0f) {
+    if (debug) {
+      printf("too slow\n");
+    }
+    return false;
+  }
+
+  if (debug) {
+    printf("success\n");
+  }
+  *outPos = pos;
+  return true;
+}
+
+bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int rollDir, int releaseDownFrame, int jsFrame, bool debug) {
+  f32 xzSpeed = 5.5f;
+  f32 ySpeed = 7.5f;
+  u16 angle = facingAngle + 0x8000 - 0xbb8 * rollDir;
   f32 animFrameNum = 0.0f;
+  Math_ScaledStepToS(&angle, facingAngle + 0x8000, 200);
 
   AnimFrame animFrame;
   CollisionPoly* wallPoly;
@@ -178,7 +233,7 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
   int dynaId;
   f32 floorHeight;
 
-  for (int i = 0; i < 35; i++) {
+  for (int i = 0; i < 40; i++) {
     if (debug) {
       printf(
           "i=%02d angle=%04x x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) xzSpeed=%.2f ySpeed=%.1f animFrameNum=%.0f\n",
@@ -208,7 +263,7 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
 
     pos = col->runChecks(pos, translate(pos, angle, xzSpeed, ySpeed), &wallPoly, &floorPoly, &dynaId, &floorHeight);
 
-    if (pos.y <= 180) {
+    if (pos.y < 180) {
       if (debug) {
         printf("too low\n");
       }
@@ -216,7 +271,7 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
     }
 
     if (pos.y <= floorHeight) {
-      if (i == 0) {
+      if (pos.y > 250) {
         if (debug) {
           printf("no jump\n");
         }
@@ -224,12 +279,6 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
       }
 
       break;
-    }
-
-    if (i == 0) {
-      // jump
-      xzSpeed = 5.5f;
-      ySpeed = 7.5f;
     }
 
     if (i < releaseDownFrame) {
@@ -255,6 +304,13 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
         pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z, floatToInt(pos.z), xzSpeed, ySpeed);
   }
 
+  if (pos.y == 180) {
+    if (debug) {
+      printf("hit ground\n");
+    }
+    return false;
+  }
+
   if (pos.x == 771) {
     if (debug) {
       printf("hit front wall\n");
@@ -263,7 +319,7 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
   }
 
   // Simulate ground clip
-  // pos.y -= 0.0001f;
+  pos.y -= 0.0001f;
 
   Vec3f prevRoot = baseRootTranslation(PLAYER_AGE_CHILD, angle);
   Vec3f prevPos = pos;
@@ -280,7 +336,7 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
         pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z, floatToInt(pos.z), xzSpeed, ySpeed);
   }
 
-  if (pos.z <= -11 || pos.z >= 170 || pos.x <= 789) {
+  if (pos.z <= 7 || pos.z >= 152 || pos.x <= 789) {
     if (debug) {
       printf("no clip\n");
     }
@@ -293,14 +349,66 @@ bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFra
   return true;
 }
 
+void findClips(Collision* col) {
+  PosAngleRange range = {
+      .angleMin = 0x1800,
+      .angleMax = 0x6800,
+      .angleStep = 0x80,
+      .xMin = 786.0f, // edge: 786
+      .xMax = 850.0f, // edge: 850
+      .xStep = 1.0f,
+      .zMin = 2.0f, // edge: 2
+      .zMax = 157.0f, // edge: 157
+      .zStep = 1.0f,
+  };
+
+  searchPosAngleRange(range, [=](u16 angle, f32 x, f32 z) {
+    Vec3f startPos = col->findFloor({x, 500.0f, z});
+    if (startPos.y < 250) {
+      return false;
+    }
+
+    bool found = false;
+    for (int rollDir : {-1, 1}) {
+      for (int releaseDownFrame = 2; releaseDownFrame <= 7; releaseDownFrame++) {
+        int minJsFrame = -1;
+        int maxJsFrame = -1;
+
+        for (int jsFrame = 8; jsFrame <= 14; jsFrame++) {
+          Vec3f pos;
+          if (!simulateRoll(col, startPos, angle, rollDir, &pos, false)) {
+            continue;
+          }
+          if (!simulateClip(col, pos, angle, rollDir, releaseDownFrame, jsFrame, false)) {
+            continue;
+          }
+
+          if (minJsFrame == -1) {
+            minJsFrame = jsFrame;
+          }
+          maxJsFrame = jsFrame;
+        }
+
+        if (minJsFrame != -1) {
+          printf("angle=%04x x=%.9g x_raw=%08x y=%.9g y_raw=%08x z=%.9g z_raw=%08x rollDir=%d releaseDown=%d minJsFrame=%d maxJsFrame=%d jsFrames=%d\n",
+              angle, startPos.x, floatToInt(startPos.x), startPos.y, floatToInt(startPos.y), startPos.z, floatToInt(startPos.z),
+              rollDir, releaseDownFrame, minJsFrame, maxJsFrame, maxJsFrame - minJsFrame + 1);
+          fflush(stdout);
+          found = true;
+          break;
+        }
+      }
+    }
+    return found;
+  });
+}
+
 int main(int argc, char* argv[]) {
   // grave to jump
   // Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {620, 180, -320}, {850, 230, 156});
 
-  // floor under tomb (TODO: do we need this?)
-  // Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {744, 180, 56}, {792, 180, 104});
-
-  Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD);
+  // floor under tomb
+  Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {744, 180, 56}, {792, 180, 104});
   col.addDynapoly(&object_spot02_objects_Col_0133EC, {0.1f, 0.1f, 0.1f},
                   {0, (s16)0xc000, 0}, {762, 180, 80});
   // col.printPolys();
@@ -315,6 +423,11 @@ int main(int argc, char* argv[]) {
 
   // findJumpSpots(&col);
 
-  // v2 setup
-  simulateClip(&col, {intToFloat(0x444634f5), intToFloat(0x439a04e3), intToFloat(0x41c3801c)}, 0x31fc, 6, 13, true);
+  // angle=5b80 x=848 x_raw=44540000 y=288.211761 y_raw=43901b1b z=46 z_raw=42380000 rollDir=-1 releaseDown=7 minJsFrame=10 maxJsFrame=10 jsFrames=1
+  // Vec3f pos = {intToFloat(0x44540000), intToFloat(0x43901b1b), intToFloat(0x42380000)};
+  // u16 angle = 0x5b80;
+  // simulateRoll(&col, pos, angle, -1, &pos, true);
+  // simulateClip(&col, pos, angle, -1, 7, 10, true);
+
+  findClips(&col);
 }
