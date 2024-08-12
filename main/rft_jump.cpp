@@ -1,3 +1,7 @@
+#include "actor.hpp"
+#include "animation.hpp"
+#include "animation_data.hpp"
+#include "collision.hpp"
 #include "collision_data.hpp"
 #include "sys_math.hpp"
 #include "sys_math3d.hpp"
@@ -162,19 +166,38 @@ void findJumpSpots(Collision* col) {
   }
 }
 
-bool simulateClip(Collision* col, Vec3f pos, bool debug) {
-  f32 xzSpeed = 6.0f;
+bool simulateClip(Collision* col, Vec3f pos, u16 facingAngle, int releaseDownFrame, int jsFrame, bool debug) {
+  f32 xzSpeed = 8.25f;
   f32 ySpeed = -4.0f;
-  u16 angle = 0xcbb8;
-  int jsFrame = 11;
-  for (int i = 0; i < 30; i++) {
+  u16 angle = facingAngle + 0x8000 - 0xbb8;
+  f32 animFrameNum = 0.0f;
+
+  AnimFrame animFrame;
+  CollisionPoly* wallPoly;
+  CollisionPoly* floorPoly;
+  int dynaId;
+  f32 floorHeight;
+
+  for (int i = 0; i < 35; i++) {
     if (debug) {
       printf(
-          "i=%02d x=%.7g y=%.7g z=%.7g x_raw=%08x y_raw=%08x z_raw=%08x "
-          "angle=%04x "
-          "xzSpeed=%.7g ySpeed=%.7g\n",
-          i, pos.x, pos.y, pos.z, floatToInt(pos.x), floatToInt(pos.y),
-          floatToInt(pos.z), angle, xzSpeed, ySpeed);
+          "i=%02d angle=%04x x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) xzSpeed=%.2f ySpeed=%.1f animFrameNum=%.0f\n",
+          i, angle, pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z, floatToInt(pos.z), xzSpeed, ySpeed, animFrameNum);
+    }
+
+    if (animFrameNum >= 7.0f) {
+      // Check for recoil
+      loadAnimFrame(gPlayerAnim_link_fighter_Lpower_jump_kiru_Data, animFrameNum, &animFrame);
+      if (weaponRecoil(col, &animFrame, PLAYER_AGE_CHILD, 5000.0f, pos, angle)) {
+        if (debug) {
+          printf("recoil\n");
+        }
+        return false;
+      }
+    }
+
+    if (i > jsFrame) {
+      animFrameNum = std::min(animFrameNum + 1.0f, 9.0f);
     }
 
     if (i > jsFrame + 1) {
@@ -182,25 +205,36 @@ bool simulateClip(Collision* col, Vec3f pos, bool debug) {
     } else {
       ySpeed -= 1.0f;
     }
-    Vec3f velocity = {Math_SinS(angle) * xzSpeed, ySpeed,
-                      Math_CosS(angle) * xzSpeed};
-    Vec3f posNext = pos + velocity * 1.5f;
 
-    CollisionPoly* wallPoly;
-    CollisionPoly* floorPoly;
-    int dynaId;
-    f32 floorHeight;
-    pos = col->runChecks(pos, posNext, &wallPoly, &floorPoly, &dynaId, &floorHeight);
+    pos = col->runChecks(pos, translate(pos, angle, xzSpeed, ySpeed), &wallPoly, &floorPoly, &dynaId, &floorHeight);
+
+    if (pos.y <= 180) {
+      if (debug) {
+        printf("too low\n");
+      }
+      return false;
+    }
+
+    if (pos.y <= floorHeight) {
+      if (i == 0) {
+        if (debug) {
+          printf("no jump\n");
+        }
+        return false;
+      }
+
+      break;
+    }
 
     if (i == 0) {
       // jump
-      xzSpeed = 6.0f;
+      xzSpeed = 5.5f;
       ySpeed = 7.5f;
     }
 
-    if (i < 5) {
+    if (i < releaseDownFrame) {
       // hold down
-      Math_ScaledStepToS(&angle, 0xc000, 400);
+      Math_ScaledStepToS(&angle, facingAngle + 0x8000, 200);
     } else if (i < jsFrame) {
       // release down
       xzSpeed = std::max(0.0f, xzSpeed - 1.0f);
@@ -208,33 +242,79 @@ bool simulateClip(Collision* col, Vec3f pos, bool debug) {
       // jumpslash
       xzSpeed = 3.0f;
       ySpeed = 4.5f;
-      angle = 0x4000;
+      angle = facingAngle;
     } else {
       xzSpeed -= 0.10f;
     }
   }
 
-  return false;
+  xzSpeed = 0.0f;
+  if (debug) {
+    printf(
+        "landing x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) xzSpeed=%.2f ySpeed=%.1f\n",
+        pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z, floatToInt(pos.z), xzSpeed, ySpeed);
+  }
+
+  if (pos.x == 771) {
+    if (debug) {
+      printf("hit front wall\n");
+    }
+    return false;
+  }
+
+  // Simulate ground clip
+  // pos.y -= 0.0001f;
+
+  Vec3f prevRoot = baseRootTranslation(PLAYER_AGE_CHILD, angle);
+  Vec3f prevPos = pos;
+
+  loadAnimFrame(gPlayerAnim_link_fighter_Lpower_jump_kiru_hit_Data, 0, &animFrame);
+  updateRootTranslation(&animFrame, &pos, angle, &prevRoot);
+
+  ySpeed -= 1.2f;
+  pos = col->runChecks(prevPos, translate(pos, angle, 0, ySpeed), &wallPoly, &floorPoly, &dynaId, &floorHeight);
+
+  if (debug) {
+    printf(
+        "jumpslash x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x) xzSpeed=%.2f ySpeed=%.1f\n",
+        pos.x, floatToInt(pos.x), pos.y, floatToInt(pos.y), pos.z, floatToInt(pos.z), xzSpeed, ySpeed);
+  }
+
+  if (pos.z <= -11 || pos.z >= 170 || pos.x <= 789) {
+    if (debug) {
+      printf("no clip\n");
+    }
+    return false;
+  }
+
+  if (debug) {
+    printf("success\n");
+  }
+  return true;
 }
 
 int main(int argc, char* argv[]) {
-  Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_ADULT, {620, 180, -320}, {850, 230, 156});
+  // grave to jump
+  // Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {620, 180, -320}, {850, 230, 156});
+
+  // floor under tomb (TODO: do we need this?)
+  // Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {744, 180, 56}, {792, 180, 104});
+
+  Collision col(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD);
   col.addDynapoly(&object_spot02_objects_Col_0133EC, {0.1f, 0.1f, 0.1f},
                   {0, (s16)0xc000, 0}, {762, 180, 80});
+  // col.printPolys();
 
   // findSeamHeights();
 
   // Jolin's demo
-//   simulateJump(
-//       &col,
-//       {intToFloat(0x442d9005), intToFloat(0x436aaf8a), intToFloat(0xc299107a)},
-//       0x23f0, 9.0f, 10, true);
+  // simulateJump(
+  //     &col,
+  //     {intToFloat(0x442d9005), intToFloat(0x436aaf8a), intToFloat(0xc299107a)},
+  //     0x23f0, 9.0f, 10, true);
 
   // findJumpSpots(&col);
 
-  // Bliny's setup
-  simulateClip(
-      &col,
-      {intToFloat(0x444536ca), intToFloat(0x4390f49f),
-      intToFloat(0x40c7e93f)}, true);
+  // v2 setup
+  simulateClip(&col, {intToFloat(0x444634f5), intToFloat(0x439a04e3), intToFloat(0x41c3801c)}, 0x31fc, 6, 13, true);
 }

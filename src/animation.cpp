@@ -184,15 +184,20 @@ void getWeaponPosition(AnimFrame* animFrame, PlayerAge age, f32 weaponLength, Ve
 
 bool weaponRecoil(Collision* col, AnimFrame* animFrame, PlayerAge age, f32 weaponLength, Vec3f pos,
                   u16 angle) {
-  Vec3f swordBase;
-  Vec3f swordTip;
-  getWeaponPosition(animFrame, age, weaponLength, pos, angle, &swordBase, &swordTip);
+  Vec3f weaponBase;
+  Vec3f weaponTip;
+  getWeaponPosition(animFrame, age, weaponLength, pos, angle, &weaponBase, &weaponTip);
 
-  f32 dist = Math_Vec3f_DistXYZ(&swordTip, &swordBase);
-  Vec3f checkBase = swordTip + (swordBase - swordTip) * ((dist + 10.0f) / dist);
+  // printf("weaponBase: x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x)\n",
+  //   weaponBase.x, floatToInt(weaponBase.x), weaponBase.y, floatToInt(weaponBase.y), weaponBase.z, floatToInt(weaponBase.z));
+  // printf("weaponTip:  x=%.9g (%08x) y=%.9g (%08x) z=%.9g (%08x)\n",
+  //   weaponTip.x, floatToInt(weaponTip.x), weaponTip.y, floatToInt(weaponTip.y), weaponTip.z, floatToInt(weaponTip.z));
+
+  f32 dist = Math_Vec3f_DistXYZ(&weaponTip, &weaponBase);
+  Vec3f checkBase = weaponTip + (weaponBase - weaponTip) * ((dist + 10.0f) / dist);
 
   CollisionPoly* outPoly;
-  col->entityLineTest(checkBase, swordTip, true, false, false, &outPoly);
+  col->entityLineTest(checkBase, weaponTip, true, false, false, &outPoly);
   if (outPoly) {
     return true;
   }
