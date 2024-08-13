@@ -24,6 +24,12 @@ u16 controlStickAngle(int x, int y) {
   return Math_Atan2S(relY, -relX);
 }
 
+u16 computeFloorPitch(Vec3f normal, u16 angle) {
+  f32 sin = Math_SinS(angle);
+  f32 cos = Math_CosS(angle);
+  return Math_Atan2S(1.0f, (-(normal.x * sin) - (normal.z * cos)) * (1.0f / normal.y));
+}
+
 f32 controlStickSpeed(int x, int y, u16 floorPitch, SpeedMode speedMode) {
   f32 magnitude = controlStickMagnitude(x, y);
 
