@@ -97,9 +97,6 @@ bool simulateJumpRoll(Collision* col, Vec3f pos, u16 angle, Vec3f* outPos, bool 
   u16 floorPitch = computeFloorPitch(normal, angle);
   f32 maxSpeed = std::min(controlStickSpeed(0, 127, floorPitch, SPEED_MODE_CURVED) * 1.5f, 8.25f);
 
-  printf("normal: x=%.9g y=%.9g z=%.9g\n", normal.x, normal.y, normal.z);
-  printf("floorPitch=%04x maxSpeed=%.9g\n", floorPitch, maxSpeed);
-
   for (int i = 0; i < 11; i++) {
     xzSpeed = std::min(xzSpeed + 2.0f, maxSpeed);
 
@@ -239,12 +236,23 @@ void findJumps(Collision* col) {
   });
 }
 
+bool inSharpRange(Vec3f pos) {
+  Vec3f wonderPos = {630, 199, -100};
+  f32 distToPlayer = Math_Vec3f_DistXZ(&wonderPos, &pos);
+  u16 yawTowardPlayer = Math_Vec3f_Yaw(&wonderPos, &pos);
 
-void findJumpSetups(Collision* col) {
+  if (distToPlayer <= 110.0f && yawTowardPlayer > 0x8000) {
+    return true;;
+  }
+
+  return false;
+}
+
+void findJumpSetups(Collision* graveCol, Collision* tombCol, int argc, char* argv[]) {
   SearchParams params = {
-      .col = col,
+      .col = graveCol,
       .minBounds = {-10000, 180, -10000},
-      .maxBounds = {10000, 10000, 10000},
+      .maxBounds = {10000, 10000, -11},
       .starts =
           {
               // target grave, sidehop right to wall
@@ -267,27 +275,29 @@ void findJumpSetups(Collision* col) {
       .zMax = -88.0f,
       .actions =
           {
-              TARGET_WALL,
+              // TARGET_WALL,
               ROLL,
               BACKFLIP,
               BACKFLIP_SIDEROLL,
-              BACKFLIP_SIDEROLL_UNTARGET,
+              // BACKFLIP_SIDEROLL_UNTARGET,
               SIDEHOP_LEFT,
               SIDEHOP_LEFT_SIDEROLL,
-              SIDEHOP_LEFT_SIDEROLL_UNTARGET,
+              // SIDEHOP_LEFT_SIDEROLL_UNTARGET,
               SIDEHOP_RIGHT,
               SIDEHOP_RIGHT_SIDEROLL,
               SIDEHOP_RIGHT_SIDEROLL_UNTARGET,
               ROTATE_ESS_LEFT,
-              ROTATE_ESS_RIGHT,
+              // ROTATE_ESS_RIGHT,
               ESS_TURN_UP,
               ESS_TURN_LEFT,
               ESS_TURN_RIGHT,
               ESS_TURN_DOWN,
+              CROUCH_STAB,
               HORIZONTAL_SLASH_SHIELD,
               DIAGONAL_SLASH_SHIELD,
               VERTICAL_SLASH_SHIELD,
               FORWARD_STAB_SHIELD,
+              FORWARD_SLASH_SHIELD,
               JUMPSLASH_SHIELD,
           },
   };
@@ -297,12 +307,21 @@ void findJumpSetups(Collision* col) {
                     int cost) {
     Vec3f pos = setup.pos;
 
-    // Don't talk to Sharp
-    Vec3f wonderPos = {-630, 199, -100};
-    f32 distToPlayer = Math_Vec3f_DistXZ(&wonderPos, &pos);
-    u16 yawTowardPlayer = Math_Vec3f_Yaw(&wonderPos, &pos);
+    // Filter angle setup
+    int essTurns = 0;
+    for (Action action : path) {
+      if (action == SIDEHOP_RIGHT_SIDEROLL_UNTARGET) {
+        essTurns += 5;
+      } else if (action == ROTATE_ESS_LEFT) {
+        essTurns++;
+      }
+    }
+    if (essTurns > 5) {
+      return false;
+    }
 
-    if (distToPlayer <= 110.0f && yawTowardPlayer > 0x8000) {
+    // Don't talk to Sharp
+    if (inSharpRange(pos)) {
       return false;
     }
 
@@ -317,11 +336,11 @@ void findJumpSetups(Collision* col) {
     u16 angle = cameraAngles[setup.angle];
 
     Vec3f pos;
-    if (!simulateJumpRoll(col, startPos, angle, &pos, false)) {
+    if (!simulateJumpRoll(graveCol, startPos, angle, &pos, false)) {
       return false;
     }
 
-    if (!simulateJump(col, pos, angle, 10, true, false)) {
+    if (!simulateJump(tombCol, pos, angle, 10, true, false)) {
       return false;
     }
 
@@ -335,7 +354,12 @@ void findJumpSetups(Collision* col) {
     return true;
   };
 
-  searchSetups(params, filter, output);
+  if (argc > 1) {
+    int shard = atoi(argv[1]);
+    searchSetupsShard(params, 0, shard, filter, output);
+  } else {
+    searchSetups(params, filter, output);
+  }
 }
 
 bool simulateRoll(Collision* col, Vec3f pos, u16 facingAngle, Vec3f* outPos, bool debug) {
@@ -562,14 +586,17 @@ void findClips(Collision* col) {
 
 int main(int argc, char* argv[]) {
   // jump to grave
-  Collision graveCol(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {620, 180, -320}, {850, 230, 156});
-  graveCol.addDynapoly(&object_spot02_objects_Col_0133EC, {0.1f, 0.1f, 0.1f},
-                  {0, (s16)0xc000, 0}, {762, 180, 80});
+  Collision graveCol(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {620, 180, -320}, {820, 230, -70});
+  graveCol.addPoly(511);
   // graveCol.printPolys();
 
-  // floor under tomb
-  Collision tombCol(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {744, 180, 56}, {792, 180, 104});
+  Collision tombCol(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD);
   tombCol.addDynapoly(&object_spot02_objects_Col_0133EC, {0.1f, 0.1f, 0.1f},
+                  {0, (s16)0xc000, 0}, {762, 180, 80});
+
+  // floor under tomb
+  Collision clipCol(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {744, 180, 56}, {792, 180, 104});
+  clipCol.addDynapoly(&object_spot02_objects_Col_0133EC, {0.1f, 0.1f, 0.1f},
                   {0, (s16)0xc000, 0}, {762, 180, 80});
   // tombCol.printPolys();
 
@@ -581,12 +608,12 @@ int main(int argc, char* argv[]) {
   // simulateJump(&graveCol, pos, angle, 10, true, true);
 
   // findJumps(&graveCol);
-  findJumpSetups(&graveCol);
+  findJumpSetups(&graveCol, &tombCol, argc, argv);
 
   // Vec3f pos = {intToFloat(0x444e0000), intToFloat(0x438f84f1), intToFloat(0x40400000)};
   // u16 angle = 0x310c;
-  // simulateRoll(&tombCol, pos, angle, &pos, true);
-  // simulateClip(&tombCol, pos, angle, 7, 10, true);
+  // simulateRoll(&clipCol, pos, angle, &pos, true);
+  // simulateClip(&clipCol, pos, angle, 7, 10, true);
 
-  // findClips(&tombCol);
+  // findClips(&clipCol);
 }
