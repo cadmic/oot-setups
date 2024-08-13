@@ -30,6 +30,8 @@
   X(VERTICAL_SLASH_SHIELD)           \
   X(FORWARD_STAB)                    \
   X(FORWARD_STAB_SHIELD)             \
+  X(FORWARD_SLASH)                   \
+  X(FORWARD_SLASH_SHIELD)            \
   X(JUMPSLASH)                       \
   X(JUMPSLASH_SHIELD)                \
   X(LONG_JUMPSLASH_SHIELD)           \

@@ -68,6 +68,10 @@ int actionCost(Action action) {
       return 12;
     case FORWARD_STAB_SHIELD:
       return 9;
+    case FORWARD_SLASH:
+      return 12;
+    case FORWARD_SLASH_SHIELD:
+      return 10;
     case JUMPSLASH:
       return 32;
     case JUMPSLASH_SHIELD:
@@ -617,6 +621,10 @@ bool PosAngleSetup::doAction(Action action) {
       return swordSlash(forwardStab, true, true, false);
     case FORWARD_STAB_SHIELD:
       return swordSlash(forwardStab, true, true, true);
+    case FORWARD_SLASH:
+      return swordSlash(verticalSlash, false, true, false);
+    case FORWARD_SLASH_SHIELD:
+      return swordSlash(verticalSlash, false, true, true);
     case JUMPSLASH:
       return jumpslash(false, false);
     case JUMPSLASH_SHIELD:
