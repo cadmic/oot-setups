@@ -1,6 +1,6 @@
 DEBUG := 0
 CXX := clang++
-CFLAGS := -Isrc -Wall -std=c++17
+CFLAGS := -Isrc -Wall -std=c++20
 
 ifeq ($(DEBUG),1)
 	CFLAGS += -g

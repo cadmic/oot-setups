@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -27,10 +28,12 @@
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
+typedef int64_t s64;
 
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+typedef uint64_t u64;
 
 typedef float f32;
 typedef double f64;
@@ -92,15 +95,19 @@ struct Vec3f {
 };
 
 inline const f32 intToFloat(u32 i) {
-  f32 out;
-  memcpy(&out, &i, 4);
-  return out;
+  return std::bit_cast<f32>(i);
 }
 
-inline u32 floatToInt(f32 x) {
-  u32 out;
-  memcpy(&out, &x, 4);
-  return out;
+inline const u32 floatToInt(f32 x) {
+  return std::bit_cast<u32>(x);
+}
+
+inline const f64 intToDouble(u64 i) {
+  return std::bit_cast<f64>(i);
+}
+
+inline const u64 doubleToInt(f64 x) {
+  return std::bit_cast<u64>(x);
 }
 
 enum PlayerAge {
