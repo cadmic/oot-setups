@@ -366,7 +366,7 @@ void findJumpSetups(Collision* graveCol, Collision* tombCol, int argc, char* arg
 
   if (argc > 1) {
     int shard = atoi(argv[1]);
-    searchSetupsShard(params, 2, shard, filter, output);
+    searchSetupsShard(params, 1, shard, filter, output);
   } else {
     searchSetups(params, filter, output);
   }
