@@ -153,9 +153,10 @@ bool simulateJumpRoll(Collision* col, Vec3f pos, u16 angle, Vec3f* outPos, bool 
 
 }
 
-bool simulateJump(Collision* col, Vec3f pos, u16 angle, int jsFrame, bool holdUp, bool debug) {
+bool simulateJump(Collision* col, Vec3f pos, u16 angle, int jsFrame, bool holdLeft, bool debug) {
   f32 xzSpeed = 5.5f;
   f32 ySpeed = 7.5f;
+  u16 facingAngle = angle;
   for (int i = 0; i < 20; i++) {
     if (debug) {
       printf(
@@ -191,23 +192,24 @@ bool simulateJump(Collision* col, Vec3f pos, u16 angle, int jsFrame, bool holdUp
       // jumpslash
       xzSpeed = 3.0f;
       ySpeed = 4.5f;
+      angle = facingAngle;
+    } else if (holdLeft && i >= jsFrame - 3 && i < jsFrame) {
+      Math_ScaledStepToS(&angle, facingAngle + 0x4000, 200);
     } else if (i > jsFrame) {
-      if (holdUp) {
-        xzSpeed += 0.05f;
-      }
+      xzSpeed += 0.05f;
     }
   }
 
   return false;
 }
 
-void findJumps(Collision* col) {
+void findJumps(Collision* graveCol, Collision* tombCol) {
   PosAngleRange range = {
       .angleMin = 0x22f0,
-      .angleMax = 0x24a0,
+      .angleMax = 0x2480,
       .angleStep = 0x10,
       .xMin = 640.0f,
-      .xMax = 681.0f,
+      .xMax = 682.0f,
       .xStep = 0.05f,
       .zMin = -121.0f,
       .zMax = -87.0f,
@@ -215,24 +217,28 @@ void findJumps(Collision* col) {
   };
 
   searchPosAngleRange(range, [=](u16 angle, f32 x, f32 z) {
-    Vec3f startPos = col->findFloor({x, 500.0f, z});
+    Vec3f startPos = graveCol->findFloor({x, 500.0f, z});
     if (startPos.y <= 180) {
       return false;
     }
 
     Vec3f pos;
-    if (!simulateJumpRoll(col, startPos, angle, &pos, false)) {
+    if (!simulateJumpRoll(graveCol, startPos, angle, &pos, false)) {
       return false;
     }
 
-    if (!simulateJump(col, pos, angle, 10, true, false)) {
-      return false;
-    }
+    bool found = false;
+    for (bool holdLeft : {false, true}) {
+      if (!simulateJump(tombCol, pos, angle, 10, holdLeft, false)) {
+        continue;
+      }
 
-    printf("angle=%04x x=%.9g x_raw=%08x y=%.9g y_raw=%08x z=%.9g z_raw=%08x\n",
-        angle, startPos.x, floatToInt(startPos.x), startPos.y, floatToInt(startPos.y), startPos.z, floatToInt(startPos.z));
-    fflush(stdout);
-    return true;
+      printf("angle=%04x x=%.9g x_raw=%08x y=%.9g y_raw=%08x z=%.9g z_raw=%08x holdLeft=%d\n",
+          angle, startPos.x, floatToInt(startPos.x), startPos.y, floatToInt(startPos.y), startPos.z, floatToInt(startPos.z), holdLeft);
+      fflush(stdout);
+      found = true;
+    }
+    return found;
   });
 }
 
@@ -266,13 +272,13 @@ void findJumpSetups(Collision* graveCol, Collision* tombCol, int argc, char* arg
               // target tomb, turn right, sidehop right, walk forward to grave
               {{708, 180, -98.75f}, 0xc000},
           },
-      .maxCost = 85,
-      .angleMin = 0x2310,
+      .maxCost = 100,
+      .angleMin = 0x22f0,
       .angleMax = 0x2480,
       .xMin = 640.8f,
-      .xMax = 680.9f,
-      .zMin = -120.6f,
-      .zMax = -88.0f,
+      .xMax = 682.0f,
+      .zMin = -119.0f,
+      .zMax = -87.0f,
       .actions =
           {
               // TARGET_WALL,
@@ -289,9 +295,9 @@ void findJumpSetups(Collision* graveCol, Collision* tombCol, int argc, char* arg
               ROTATE_ESS_LEFT,
               // ROTATE_ESS_RIGHT,
               ESS_TURN_UP,
-              ESS_TURN_LEFT,
-              ESS_TURN_RIGHT,
-              ESS_TURN_DOWN,
+              SHIELD_TURN_LEFT,
+              SHIELD_TURN_RIGHT,
+              SHIELD_TURN_DOWN,
               CROUCH_STAB,
               HORIZONTAL_SLASH_SHIELD,
               DIAGONAL_SLASH_SHIELD,
@@ -340,23 +346,27 @@ void findJumpSetups(Collision* graveCol, Collision* tombCol, int argc, char* arg
       return false;
     }
 
-    if (!simulateJump(tombCol, pos, angle, 10, true, false)) {
-      return false;
-    }
+    bool found = false;
+    for (bool holdLeft : {false, true}) {
+      if (!simulateJump(tombCol, pos, angle, 10, holdLeft, false)) {
+        continue;
+      }
 
-    printf(
-        "cost=%d initialx=%.9g (%08x) initialz=%.9g (%08x) "
-        "initialAngle=%04x x=%.9g (%08x) z=%.9g (%08x) angle=%04x actions=%s\n",
-        cost, initialPos.x, floatToInt(initialPos.x), initialPos.z,
-        floatToInt(initialPos.z), initialAngle, startPos.x, floatToInt(startPos.x),
-        startPos.z, floatToInt(startPos.z), angle, actionNames(actions).c_str());
-    fflush(stdout);
-    return true;
+      printf(
+          "cost=%d initialx=%.9g (%08x) initialz=%.9g (%08x) "
+          "initialAngle=%04x x=%.9g (%08x) z=%.9g (%08x) angle=%04x holdLeft=%d actions=%s\n",
+          cost, initialPos.x, floatToInt(initialPos.x), initialPos.z,
+          floatToInt(initialPos.z), initialAngle, startPos.x, floatToInt(startPos.x),
+          startPos.z, floatToInt(startPos.z), angle, holdLeft, actionNames(actions).c_str());
+      fflush(stdout);
+      found = true;
+    }
+    return found;
   };
 
   if (argc > 1) {
     int shard = atoi(argv[1]);
-    searchSetupsShard(params, 0, shard, filter, output);
+    searchSetupsShard(params, 2, shard, filter, output);
   } else {
     searchSetups(params, filter, output);
   }
@@ -588,6 +598,9 @@ int main(int argc, char* argv[]) {
   // jump to grave
   Collision graveCol(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD, {620, 180, -320}, {820, 230, -70});
   graveCol.addPoly(511);
+  graveCol.addPoly(510);
+  graveCol.addPoly(516);
+  graveCol.addPoly(517);
   // graveCol.printPolys();
 
   Collision tombCol(&spot02_sceneCollisionHeader_003C54, PLAYER_AGE_CHILD);
@@ -602,12 +615,12 @@ int main(int argc, char* argv[]) {
 
   // findSeamHeights();
 
-  // Vec3f pos = {intToFloat(0x4420a610), intToFloat(0x4348b0bf), intToFloat(0xc2ef3cbc)};
-  // u16 angle = 0x23e9;
+  // Vec3f pos = {intToFloat(0x442a09a0), intToFloat(0x435c558e), intToFloat(0xc2b1227a)};
+  // u16 angle = 0x2328;
   // simulateJumpRoll(&graveCol, pos, angle, &pos, true);
-  // simulateJump(&graveCol, pos, angle, 10, true, true);
+  // simulateJump(&tombCol, pos, angle, 10, true, true);
 
-  // findJumps(&graveCol);
+  // findJumps(&graveCol, &tombCol);
   findJumpSetups(&graveCol, &tombCol, argc, argv);
 
   // Vec3f pos = {intToFloat(0x444e0000), intToFloat(0x438f84f1), intToFloat(0x40400000)};
