@@ -87,6 +87,38 @@ struct Vec3f {
     return Vec3f(x * rhs, y * rhs, z * rhs);
   }
 
+  Vec3f operator/(const f32& rhs) const {
+    return Vec3f(x / rhs, y / rhs, z / rhs);
+  }
+
+  Vec3f operator+=(const Vec3f& rhs) {
+    x += rhs.x;
+    y += rhs.y;
+    z += rhs.z;
+    return *this;
+  }
+
+  Vec3f operator-=(const Vec3f& rhs) {
+    x -= rhs.x;
+    y -= rhs.y;
+    z -= rhs.z;
+    return *this;
+  }
+
+  Vec3f operator*=(const f32& rhs) {
+    x *= rhs;
+    y *= rhs;
+    z *= rhs;
+    return *this;
+  }
+
+  Vec3f operator/=(const f32& rhs) {
+    x /= rhs;
+    y /= rhs;
+    z /= rhs;
+    return *this;
+  }
+
   bool operator==(const Vec3f& rhs) const {
     return x == rhs.x && y == rhs.y && z == rhs.z;
   }

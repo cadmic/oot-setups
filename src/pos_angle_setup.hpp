@@ -68,6 +68,12 @@ int actionsCost(const std::vector<Action>& action);
 
 struct SwordSlash;
 
+struct Collider {
+  Vec3s pos;
+  s16 objectRadius;
+  f32 dispRatio;
+};
+
 struct PosAngleSetup {
   // Parameters
   Collision* col;
@@ -88,10 +94,14 @@ struct PosAngleSetup {
   // Wall interaction for targeting
   bool canTargetWall;
   u16 targetWallAngle;
+  // Collider data
+  std::vector<Collider> colliders;
 
   PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
                 Vec3f minBounds, Vec3f maxBounds);
   PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle);
+
+  void addCollider(Vec3s pos, s16 objectRadius, f32 dispRatio);
 
   // Returns true if the action was performed successfully.
   bool performAction(Action action);
