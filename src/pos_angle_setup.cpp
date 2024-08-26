@@ -4,6 +4,7 @@
 #include "animation.hpp"
 #include "animation_data.hpp"
 #include "camera.hpp"
+#include "collider.hpp"
 #include "sys_math.hpp"
 #include "sys_math3d.hpp"
 #include "sys_matrix.hpp"
@@ -190,6 +191,10 @@ PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
                     Vec3f(-10000, -10000, -10000), Vec3f(10000, 10000, 10000)) {
 }
 
+void PosAngleSetup::addCollider(Vec3s pos, s16 objectRadius, f32 dispRatio) {
+  this->colliders.push_back({pos, objectRadius, dispRatio});
+}
+
 bool PosAngleSetup::ensureTargeted() {
   if (!this->targeted && this->canTargetWall &&
       this->angle != this->targetWallAngle) {
@@ -236,7 +241,12 @@ bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
   //     "ySpeed=%.9g\n", this->pos.x, this->pos.y, this->pos.z, this->angle,
   //     xzSpeed, ySpeed);
 
-  Vec3f intendedPos = translate(pos, movementAngle, xzSpeed, ySpeed);
+  Vec3f displacement;
+  for (const Collider& c : this->colliders) {
+    displacement += calculatePush(pos.toVec3s(), c.pos, c.objectRadius, c.dispRatio);
+  }
+
+  Vec3f intendedPos = translate(pos, movementAngle, xzSpeed, ySpeed, displacement);
 
   CollisionPoly* wallPoly;
   f32 floorHeight;
