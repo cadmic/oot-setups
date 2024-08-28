@@ -293,20 +293,20 @@ void findSetups(Collision* col, int argc, char* argv[]) {
             {
                 // roll into right corner (target left wall)
                 {{intToFloat(0xc503f666), -760, intToFloat(0xc3a31437)}, 0x9f8a},
-                {{intToFloat(0xc503f067), -760, intToFloat(0xc3a34318)}, 0x9882},
-                {{intToFloat(0xc503e952), -760, intToFloat(0xc3a37a76)}, 0x917a},
-                {{intToFloat(0xc503e181), -760, intToFloat(0xc3a3b796)}, 0x8a72},
-                {{intToFloat(0xc503d907), -760, intToFloat(0xc3a3f9db)}, 0x836a},
-                {{intToFloat(0xc503d063), -760, intToFloat(0xc3a43d68)}, 0x7c62},
+                // {{intToFloat(0xc503f067), -760, intToFloat(0xc3a34318)}, 0x9882},
+                // {{intToFloat(0xc503e952), -760, intToFloat(0xc3a37a76)}, 0x917a},
+                // {{intToFloat(0xc503e181), -760, intToFloat(0xc3a3b796)}, 0x8a72},
+                // {{intToFloat(0xc503d907), -760, intToFloat(0xc3a3f9db)}, 0x836a},
+                // {{intToFloat(0xc503d063), -760, intToFloat(0xc3a43d68)}, 0x7c62},
                 // roll into right corner (target right wall)
                 {{intToFloat(0xc503ce1a), -760, intToFloat(0xc3a44f44)}, 0x7a95},
-                {{intToFloat(0xc503d6ca), -760, intToFloat(0xc3a40b5b)}, 0x819d},
-                {{intToFloat(0xc503df60), -760, intToFloat(0xc3a3c83e)}, 0x88a5},
-                {{intToFloat(0xc503e75e), -760, intToFloat(0xc3a3c83e)}, 0x8fad},
-                {{intToFloat(0xc503eeae), -760, intToFloat(0xc3a35095)}, 0x96b6},
-                {{intToFloat(0xc503f4f5), -760, intToFloat(0xc3a31f7c)}, 0x9dbd},
+                // {{intToFloat(0xc503d6ca), -760, intToFloat(0xc3a40b5b)}, 0x819d},
+                // {{intToFloat(0xc503df60), -760, intToFloat(0xc3a3c83e)}, 0x88a5},
+                // {{intToFloat(0xc503e75e), -760, intToFloat(0xc3a3c83e)}, 0x8fad},
+                // {{intToFloat(0xc503eeae), -760, intToFloat(0xc3a35095)}, 0x96b6},
+                // {{intToFloat(0xc503f4f5), -760, intToFloat(0xc3a31f7c)}, 0x9dbd},
                 // target web, sidehop into right corner
-                {{intToFloat(0xc507c580), intToFloat(0xc43d5ca7), intToFloat(0xc392251c)}, 0xa033},
+                // {{intToFloat(0xc507c580), intToFloat(0xc43d5ca7), intToFloat(0xc392251c)}, 0xa033},
                 // target web, sidehop sideroll into right corner
                 {{intToFloat(0xc507c57f), intToFloat(0xc43d5ca5), intToFloat(0xc392251c)}, 0xa033},
                 // target web, sidehop sideroll into left corner
@@ -314,7 +314,7 @@ void findSetups(Collision* col, int argc, char* argv[]) {
                 // roll into left corner
                 {{intToFloat(0xc50f9000), -760, intToFloat(0xc3089454)}, 0xc000},
             },
-        .maxCost = 115,
+        .maxCost = 120,
         .angleMin = 0xe040,
         .angleMax = 0xe0cf,
         .xMin = -2165.98f,
@@ -343,6 +343,16 @@ void findSetups(Collision* col, int argc, char* argv[]) {
             },
     };
 
+    auto filter = [&](Vec3f initialPos, u16 initialAngle,
+                        const PosAngleSetup& setup, const std::vector<Action>& path,
+                        int cost) {
+        if (setup.pos.x > -2035.0f && setup.pos.z < -280.0f) {
+            return false;  // Too close to bushes
+        }
+
+        return true;
+    };
+
     auto output = [&](Vec3f initialPos, u16 initialAngle,
                         const PosAngleSetup& setup, const std::vector<Action>& path,
                         int cost) {
@@ -361,9 +371,9 @@ void findSetups(Collision* col, int argc, char* argv[]) {
 
     if (argc > 1) {
         int shard = atoi(argv[1]);
-        searchSetupsShard(params, 2, shard, output);
+        searchSetupsShard(params, 2, shard, filter, output);
     } else {
-        searchSetups(params, output);
+        searchSetups(params, filter, output);
     }
 }
 
