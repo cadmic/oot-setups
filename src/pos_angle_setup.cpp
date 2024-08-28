@@ -98,7 +98,7 @@ int actionCost(Action action) {
 int actionCost(Action prevAction, Action action) {
   if ((prevAction == ROTATE_ESS_LEFT && action == ROTATE_ESS_LEFT) ||
       (prevAction == ROTATE_ESS_RIGHT && action == ROTATE_ESS_RIGHT)) {
-    return 2;
+    return 4;
   }
   return actionCost(action);
 }
