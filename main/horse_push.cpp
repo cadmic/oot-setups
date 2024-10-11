@@ -1,6 +1,7 @@
 #include "actor.hpp"
 #include "animation.hpp"
 #include "collider.hpp"
+#include "search.hpp"
 #include "sys_math.hpp"
 
 Limb gHorseIngoSkel[] = {
@@ -336,16 +337,48 @@ std::vector<Vec3s> generateHorseHeads(Vec3f pos, u16 angle) {
     return result;
 }
 
+void searchRolls(Vec3f horsePos, u16 horseAngle) {
+    PosAngleRange range = {
+        .angleMin = -0x0800,
+        .angleMax = 0x0800,
+        .xMin = 284,
+        .xMax = 306,
+        .xStep = 0.1f,
+        .zMin = -902,
+        .zMax = -838,
+        .zStep = 0.1f,
+    };
+
+    Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+    std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
+
+    searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
+        Vec3f pos = {x, 37, z};
+        bool found = false;
+        for (int neighFrame = 14; neighFrame < 20; neighFrame++) {
+            for (int strainDir : {-1, 1}) {
+                if (simulateRoll(pos, angle, horseBody, horseHeads, neighFrame, strainDir, false)) {
+                    printf("angle=%04x x=%.9g z=%.9g neighFrame=%d strainDir=%d\n", angle, x, z, neighFrame, strainDir);
+                    found = true;
+                }
+            }
+        }
+        return found;
+    });
+}
+
 int main(int argc, char* argv[]) {
     Vec3f horsePos = {intToFloat(0x437a85b0), 0, intToFloat(0xc44a1b56)};
     u16 horseAngle = 0x48b1;
 
-    Vec3f linkPos = {intToFloat(0x43954000), 37, intToFloat(0xc45ed814)};
-    u16 linkAngle = 0xf93e;
+    // Vec3f linkPos = {intToFloat(0x43954000), 37, intToFloat(0xc45ed814)};
+    // u16 linkAngle = 0xf93e;
 
-    Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
-    std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
-    simulateRoll(linkPos, linkAngle, horseBody, horseHeads, 17, 1, true);
+    // Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+    // std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
+    // simulateRoll(linkPos, linkAngle, horseBody, horseHeads, 17, 1, true);
+
+    searchRolls(horsePos, horseAngle);
 
     return 0;
 }
