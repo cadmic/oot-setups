@@ -14,3 +14,6 @@ Vec3f immovablePush(Vec3f linkPos, Vec3f objectPos, s16 objectRadius);
 
 // Test whether a sphere collides with a quad.
 bool colliderSphVsQuad(Sphere16* sph, Vec3f* quad);
+
+// Test whether a sphere collides with a cylinder.
+bool colliderSphVsCyl(Sphere16* sph, Cylinder16* cyl);

@@ -42,3 +42,8 @@ bool colliderSphVsQuad(Sphere16* sph, Vec3f* quad) {
   return Math3D_TriVsSphIntersect(sph, &tri1, &hitPos) ||
          Math3D_TriVsSphIntersect(sph, &tri2, &hitPos);
 }
+
+bool colliderSphVsCyl(Sphere16* sph, Cylinder16* cyl) {
+  f32 overlapSize;
+  return Math3D_SphVsCylOverlap(sph, cyl, &overlapSize);
+}
