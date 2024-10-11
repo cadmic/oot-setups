@@ -4,35 +4,56 @@
 #include "global.hpp"
 #include "skin_matrix.hpp"
 
+struct JointIndex {
+  u16 x;
+  u16 y;
+  u16 z;
+};
+
+struct Limb {
+  Vec3s jointPos;
+  u8 child;
+  u8 sibling;
+};
+
+struct AnimationHeader {
+  s16 frameCount;
+  u16* frameData;
+  JointIndex* jointIndices;
+  u16 staticIndexMax;
+};
+
+#define LIMB_DONE 0xFF
+
 enum PlayerLimb {
-  /* 0x00 */ PLAYER_LIMB_NONE,
-  /* 0x01 */ PLAYER_LIMB_ROOT,
-  /* 0x02 */ PLAYER_LIMB_WAIST,
-  /* 0x03 */ PLAYER_LIMB_LOWER,
-  /* 0x04 */ PLAYER_LIMB_R_THIGH,
-  /* 0x05 */ PLAYER_LIMB_R_SHIN,
-  /* 0x06 */ PLAYER_LIMB_R_FOOT,
-  /* 0x07 */ PLAYER_LIMB_L_THIGH,
-  /* 0x08 */ PLAYER_LIMB_L_SHIN,
-  /* 0x09 */ PLAYER_LIMB_L_FOOT,
-  /* 0x0A */ PLAYER_LIMB_UPPER,
-  /* 0x0B */ PLAYER_LIMB_HEAD,
-  /* 0x0C */ PLAYER_LIMB_HAT,
-  /* 0x0D */ PLAYER_LIMB_COLLAR,
-  /* 0x0E */ PLAYER_LIMB_L_SHOULDER,
-  /* 0x0F */ PLAYER_LIMB_L_FOREARM,
-  /* 0x10 */ PLAYER_LIMB_L_HAND,
-  /* 0x11 */ PLAYER_LIMB_R_SHOULDER,
-  /* 0x12 */ PLAYER_LIMB_R_FOREARM,
-  /* 0x13 */ PLAYER_LIMB_R_HAND,
-  /* 0x14 */ PLAYER_LIMB_SHEATH,
-  /* 0x15 */ PLAYER_LIMB_TORSO,
-  /* 0x16 */ PLAYER_LIMB_MAX
+  PLAYER_LIMB_ROOT,
+  PLAYER_LIMB_WAIST,
+  PLAYER_LIMB_LOWER,
+  PLAYER_LIMB_R_THIGH,
+  PLAYER_LIMB_R_SHIN,
+  PLAYER_LIMB_R_FOOT,
+  PLAYER_LIMB_L_THIGH,
+  PLAYER_LIMB_L_SHIN,
+  PLAYER_LIMB_L_FOOT,
+  PLAYER_LIMB_UPPER,
+  PLAYER_LIMB_HEAD,
+  PLAYER_LIMB_HAT,
+  PLAYER_LIMB_COLLAR,
+  PLAYER_LIMB_L_SHOULDER,
+  PLAYER_LIMB_L_FOREARM,
+  PLAYER_LIMB_L_HAND,
+  PLAYER_LIMB_R_SHOULDER,
+  PLAYER_LIMB_R_FOREARM,
+  PLAYER_LIMB_R_HAND,
+  PLAYER_LIMB_SHEATH,
+  PLAYER_LIMB_TORSO,
+  PLAYER_LIMB_MAX,
 };
 
 struct AnimFrame {
+  Vec3s rootPos;
   // Entry 0 is actually root limb position
-  Vec3s jointTable[22];
+  Vec3s jointTable[PLAYER_LIMB_MAX];
   s16 face;
 };
 
@@ -41,12 +62,20 @@ struct AnimFrame {
 bool nextAnimFrame(f32* curFrame, int endFrame, f32 updateRate);
 
 // Load an animation frame from the animation data.
+void loadAnimFrame(AnimationHeader* animHeader, int limbCount, int frame,
+                   Vec3f* rootPos, Vec3s* jointTable);
+
+// Load a Link animation frame from the animation data.
 void loadAnimFrame(u16* animData, int frame, AnimFrame* animFrame);
 
 // Load only the upper body part of animation frame from the animation data.
 void loadUpperBodyAnimFrame(u16* animData, int frame, AnimFrame* animFrame);
 
-// Apply animation frame, outputting matrices for each limb.
+// Apply animation frame for a skeleton, outputting matrices for each limb.
+void applySkeleton(Limb* skeleton, Vec3s* jointTable, Vec3f pos, u16 angle,
+                   Vec3f rootPos, MtxF* outLimbMatrices);
+
+// Apply animation frame for Link, outputting matrices for each limb.
 void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
                     MtxF* outLimbMatrices);
 

@@ -4,14 +4,6 @@
 #include "sys_math3d.hpp"
 #include "sys_matrix.hpp"
 
-struct Limb {
-  Vec3s jointPos;
-  u8 child;
-  u8 sibling;
-};
-
-#define LIMB_DONE 0xFF
-
 Limb childLinkSkeleton[] = {
     {{0, 2376, 0}, 0x01, LIMB_DONE},
     {{-4, -104, 0}, 0x02, 0x09},
@@ -73,39 +65,79 @@ bool nextAnimFrame(f32* curFrame, int endFrame, f32 updateRate) {
   return true;
 }
 
+void loadAnimFrame(AnimationHeader* animHeader, int limbCount, int frame, Vec3f* rootPos, Vec3s* jointTable) {
+    JointIndex* jointIndices = &animHeader->jointIndices[0];
+    u16* frameData = animHeader->frameData;
+    u16* staticData = &frameData[0];
+    u16* dynamicData = &frameData[frame];
+    u16 staticIndexMax = animHeader->staticIndexMax;
+
+    rootPos->x = (s16)(jointIndices->x >= staticIndexMax ? dynamicData[jointIndices->x] : staticData[jointIndices->x]);
+    rootPos->y = (s16)(jointIndices->y >= staticIndexMax ? dynamicData[jointIndices->y] : staticData[jointIndices->y]);
+    rootPos->z = (s16)(jointIndices->z >= staticIndexMax ? dynamicData[jointIndices->z] : staticData[jointIndices->z]);
+    jointIndices++;
+
+    for (int i = 0; i < limbCount; i++) {
+        jointTable->x = (s16)(jointIndices->x >= staticIndexMax ? dynamicData[jointIndices->x] : staticData[jointIndices->x]);
+        jointTable->y = (s16)(jointIndices->y >= staticIndexMax ? dynamicData[jointIndices->y] : staticData[jointIndices->y]);
+        jointTable->z = (s16)(jointIndices->z >= staticIndexMax ? dynamicData[jointIndices->z] : staticData[jointIndices->z]);
+        jointIndices++;
+        jointTable++;
+    }
+}
+
 void loadAnimFrame(u16* animData, int frame, AnimFrame* animFrame) {
   memcpy(animFrame, &animData[frame * sizeof(AnimFrame) / sizeof(u16)],
          sizeof(AnimFrame));
 }
 
 void loadUpperBodyAnimFrame(u16* animData, int frame, AnimFrame* animFrame) {
-  memcpy(&animFrame->jointTable[10],
+  memcpy(&animFrame->jointTable[9],
          &animData[frame * sizeof(AnimFrame) / sizeof(u16) +
-                   10 * sizeof(Vec3s) / sizeof(u16)],
-         sizeof(AnimFrame) - 10 * sizeof(Vec3s));
+                   9 * sizeof(Vec3s) / sizeof(u16)],
+         sizeof(AnimFrame) - 9 * sizeof(Vec3s));
 }
 
-void applyLimb(Limb* skeleton, AnimFrame* animFrame, u8 limbIndex,
+void applyLimb(Limb* skeleton, Vec3s* jointTable, u8 limbIndex,
                MtxF* outLimbMatrices) {
   Limb* limb = &skeleton[limbIndex];
 
   Matrix_Push();
 
   Vec3f pos = limb->jointPos;
-  Vec3s rot = animFrame->jointTable[limbIndex + 1];
+  Vec3s rot = jointTable[limbIndex];
   Matrix_TranslateRotateZYX(&pos, &rot);
 
-  Matrix_Get(&outLimbMatrices[limbIndex + 1]);
+  Matrix_Get(&outLimbMatrices[limbIndex]);
 
   if (limb->child != LIMB_DONE) {
-    applyLimb(skeleton, animFrame, limb->child, outLimbMatrices);
+    applyLimb(skeleton, jointTable, limb->child, outLimbMatrices);
   }
 
   Matrix_Pop();
 
   if (limb->sibling != LIMB_DONE) {
-    applyLimb(skeleton, animFrame, limb->sibling, outLimbMatrices);
+    applyLimb(skeleton, jointTable, limb->sibling, outLimbMatrices);
   }
+}
+
+void applySkeleton(Limb* skeleton, Vec3s* jointTable, Vec3f pos, u16 angle,
+                   Vec3f rootPos, MtxF* outLimbMatrices) {
+  Matrix_Push();
+
+  Vec3s rot = {0, (s16)angle, 0};
+  Matrix_SetTranslateRotateYXZ(pos.x, pos.y, pos.z, &rot);
+  Matrix_Scale(0.01f, 0.01f, 0.01f, MTXMODE_APPLY);
+
+  Vec3s rootRot = jointTable[0];
+  Matrix_TranslateRotateZYX(&rootPos, &rootRot);
+
+  Limb* rootLimb = &skeleton[0];
+  if (rootLimb->child != LIMB_DONE) {
+    applyLimb(skeleton, jointTable, rootLimb->child, outLimbMatrices);
+  }
+
+  Matrix_Pop();
 }
 
 void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
@@ -113,28 +145,13 @@ void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
   Limb* skeleton =
       age == PLAYER_AGE_CHILD ? childLinkSkeleton : adultLinkSkeleton;
 
-  Matrix_Push();
-
-  Vec3s linkRot = {0, (s16)angle, 0};
-  Matrix_SetTranslateRotateYXZ(pos.x, pos.y, pos.z, &linkRot);
-  Matrix_Scale(0.01f, 0.01f, 0.01f, MTXMODE_APPLY);
-
-  Vec3f rootPos = animFrame->jointTable[0];
+  Vec3f rootPos = animFrame->rootPos;
   if (age == PLAYER_AGE_CHILD) {
     // 0.64f is from Player_OverrideLimbDrawGameplayCommon
     rootPos = rootPos * 0.64f;
   }
-  Vec3s rootRot = animFrame->jointTable[1];
-  Matrix_TranslateRotateZYX(&rootPos, &rootRot);
 
-  Matrix_Get(&outLimbMatrices[PLAYER_LIMB_ROOT]);
-
-  Limb* rootLimb = &skeleton[0];
-  if (rootLimb->child != LIMB_DONE) {
-    applyLimb(skeleton, animFrame, rootLimb->child, outLimbMatrices);
-  }
-
-  Matrix_Pop();
+  applySkeleton(skeleton, animFrame->jointTable, pos, angle, rootPos, outLimbMatrices);
 }
 
 Vec3f baseRootTranslation(PlayerAge age, u16 angle) {
@@ -145,12 +162,12 @@ Vec3f baseRootTranslation(PlayerAge age, u16 angle) {
 
 void updateRootTranslation(AnimFrame* animFrame, Vec3f* pos, u16 angle,
                            Vec3f* prevRootTranslation) {
-  Vec3f root = rotate(animFrame->jointTable[0], angle);
+  Vec3f root = rotate(animFrame->rootPos, angle);
   Vec3f diff = root - *prevRootTranslation;
   diff.y = 0.0f;
 
-  animFrame->jointTable[0].x = -57;
-  animFrame->jointTable[0].z = 0;
+  animFrame->rootPos.x = -57;
+  animFrame->rootPos.z = 0;
   *pos = *pos + diff * 0.01f;
   *prevRootTranslation = root;
 }
