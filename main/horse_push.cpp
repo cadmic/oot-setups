@@ -1,4 +1,7 @@
+#include "actor.hpp"
 #include "animation.hpp"
+#include "collider.hpp"
+#include "sys_math.hpp"
 
 Limb gHorseIngoSkel[] = {
     { { 0, 4820, -1965 }, 0x01, LIMB_DONE },
@@ -194,9 +197,125 @@ AnimationHeader gHorseIngoRearingAnim = {
     33, sHorseIngoRearingAnimFrameData, sHorseIngoRearingAnimJointIndices, 4
 };
 
-int main(int argc, char* argv[]) {
-    Vec3f pos = {intToFloat(0x437a85b0), 0, intToFloat(0xc44a1b56)};
-    u16 angle = 0x48b1;
+// height, yshift
+std::vector<std::pair<int, int>> rollCylinders = {
+    { 46, 12 },
+    { 45, 11 },
+    { 34, 6 },
+    { 10, 14 },
+    { 5, 19 },
+    { 14, 19 },
+    { 1, 21 },
+    { 11, 13 },
+    { 24, 6 },
+    { 27, 6 },
+    { 30, 5 },
+    { 32, 5 },
+    { 32, 5 },
+    { 33, 5 },
+};
+
+bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s>& horseHeads, int neighFrame, int strainDir, bool debug) {
+    neighFrame++;
+
+    f32 xzSpeed = 0.0f;
+    f32 ySpeed = -4.0f;
+    s16 height = 53;
+    s16 yShift = 5;
+    int jumpFrame = -1;
+    for (int i = 0; i < 20; i++, neighFrame++) {
+        if (neighFrame >= horseHeads.size()) {
+            if (debug) {
+                printf("no neigh\n");
+            }
+            return false;
+        }
+
+        Sphere16 head = { horseHeads[neighFrame], 20 };
+        Cylinder16 cyl = { 12, height, yShift, pos.toVec3s() };
+
+        if (debug) {
+            printf("frame %d: angle=%04x x=%.9g y=%.9g z=%.9g neighFrame=%d xzSpeed=%.1f ySpeed=%.1f height=%d yShift=%d hx=%d hy=%d hz=%d\n",
+                i, angle, pos.x, pos.y, pos.z, neighFrame, xzSpeed, ySpeed, height, yShift, head.center.x, head.center.y, head.center.z);
+        }
+
+        if (colliderSphVsCyl(&head, &cyl)) {
+            if (cyl.pos.x == head.center.x + 1 && cyl.pos.z == head.center.z + 2) {
+                if (debug) {
+                    printf("success!\n");
+                }
+                return true;
+            } else {
+                if (debug) {
+                    printf("bad collision\n");
+                }
+                return false;
+            }
+        }
+
+        Vec3f bodyPush = immovablePush(pos, Vec3f(horseBody), 20.0f);
+
+        ySpeed -= 1.0f;
+        pos = translate(pos, angle, xzSpeed, ySpeed, bodyPush);
+
+        if (pos.x >= 284.0f && pos.x <= 306.0f && pos.z <= -828.0f) {
+            pos.y = 37.0f;
+        } else if (jumpFrame == -1) {
+            jumpFrame = i;
+        }
+
+        if (jumpFrame == -1) {
+            if (i < 11) {
+                xzSpeed = std::min(xzSpeed + 2.0f, 9.0f);
+            } else {
+                if (debug) {
+                    printf("no jump\n");
+                }
+                return false;
+            }
+        } else if (i == jumpFrame) {
+            xzSpeed = 6.0f;
+            ySpeed = 7.5f;
+        }
+
+        if (jumpFrame == -1 || i == jumpFrame) {
+            height = rollCylinders[i].first;
+            yShift = rollCylinders[i].second;
+        } else if (i == jumpFrame + 1) {
+            height = 42;
+            yShift = 10;
+        } else {
+            if (debug) {
+                printf("no collision\n");
+            }
+            return false;
+        }
+
+        if (jumpFrame != -1 && i >= jumpFrame) {
+            angle += 0x12C * strainDir;
+        }
+
+        ySpeed = std::max(ySpeed, -4.0f);
+    }
+
+    if (debug) {
+        printf("max iteration count reached?\n");
+    }
+    return false;
+}
+
+Vec3s generateHorseBody(Vec3f pos, u16 angle) {
+    pos.y -= 11.25f;  // gravity
+    Vec3s bodyPos = pos.toVec3s();
+
+    bodyPos.x += (s16)(Math_SinS(angle) * 11.0f);
+    bodyPos.z += (s16)(Math_CosS(angle) * 11.0f);
+
+    return bodyPos;
+}
+
+std::vector<Vec3s> generateHorseHeads(Vec3f pos, u16 angle) {
+    std::vector<Vec3s> result;
 
     for (int i = 0; i < 33; i++) {
         int limbCount = ARRAY_COUNT(gHorseIngoSkel);
@@ -211,8 +330,22 @@ int main(int argc, char* argv[]) {
         Vec3f headPos;
         SkinMatrix_Vec3fMtxFMultXYZ(&limbMatrices[13], &sZeroVec, &headPos);
 
-        printf("%i: %.9g %.9g %.9g\n", i, headPos.x, headPos.y, headPos.z);
+        result.push_back(headPos.toVec3s());
     }
+
+    return result;
+}
+
+int main(int argc, char* argv[]) {
+    Vec3f horsePos = {intToFloat(0x437a85b0), 0, intToFloat(0xc44a1b56)};
+    u16 horseAngle = 0x48b1;
+
+    Vec3f linkPos = {intToFloat(0x43954000), 37, intToFloat(0xc45ed814)};
+    u16 linkAngle = 0xf93e;
+
+    Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+    std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
+    simulateRoll(linkPos, linkAngle, horseBody, horseHeads, 17, 1, true);
 
     return 0;
 }
