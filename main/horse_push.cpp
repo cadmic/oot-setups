@@ -216,91 +216,72 @@ std::vector<std::pair<int, int>> rollCylinders = {
     { 33, 5 },
 };
 
-bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s>& horseHeads, int neighFrame, int strainDir, bool debug) {
-    neighFrame++;
-
+bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s>& horseHead, int* outNeighFrame, int* outStrainDir, bool debug) {
     f32 xzSpeed = 0.0f;
-    f32 ySpeed = -4.0f;
-    s16 height = 53;
-    s16 yShift = 5;
     int jumpFrame = -1;
-    for (int i = 0; i < 20; i++, neighFrame++) {
-        if (neighFrame >= horseHeads.size()) {
-            if (debug) {
-                printf("no neigh\n");
-            }
-            return false;
-        }
-
-        Sphere16 head = { horseHeads[neighFrame], 20 };
-        Cylinder16 cyl = { 12, height, yShift, pos.toVec3s() };
-
+    for (int i = 1; i < 10; i++) {
         if (debug) {
-            printf("frame %d: angle=%04x x=%.9g y=%.9g z=%.9g neighFrame=%d xzSpeed=%.1f ySpeed=%.1f height=%d yShift=%d hx=%d hy=%d hz=%d\n",
-                i, angle, pos.x, pos.y, pos.z, neighFrame, xzSpeed, ySpeed, height, yShift, head.center.x, head.center.y, head.center.z);
-        }
-
-        if (colliderSphVsCyl(&head, &cyl)) {
-            if (cyl.pos.x == head.center.x + 1 && cyl.pos.z == head.center.z + 2) {
-                if (debug) {
-                    printf("success!\n");
-                }
-                return true;
-            } else {
-                if (debug) {
-                    printf("bad collision\n");
-                }
-                return false;
-            }
+            printf("roll frame %d: angle=%04x x=%.9g y=%.9g z=%.9g xzSpeed=%.1f\n",
+                i, angle, pos.x, pos.y, pos.z, xzSpeed);
         }
 
         Vec3f bodyPush = immovablePush(pos, Vec3f(horseBody), 20.0f);
-
-        ySpeed -= 1.0f;
-        pos = translate(pos, angle, xzSpeed, ySpeed, bodyPush);
+        pos = translate(pos, angle, xzSpeed, -5.0f, bodyPush);
 
         if (pos.x >= 284.0f && pos.x <= 306.0f && pos.z <= -828.0f) {
             pos.y = 37.0f;
-        } else if (jumpFrame == -1) {
-            jumpFrame = i;
-        }
-
-        if (jumpFrame == -1) {
-            if (i < 11) {
-                xzSpeed = std::min(xzSpeed + 2.0f, 9.0f);
-            } else {
-                if (debug) {
-                    printf("no jump\n");
-                }
-                return false;
-            }
-        } else if (i == jumpFrame) {
-            xzSpeed = 6.0f;
-            ySpeed = 7.5f;
-        }
-
-        if (jumpFrame == -1 || i == jumpFrame) {
-            height = rollCylinders[i].first;
-            yShift = rollCylinders[i].second;
-        } else if (i == jumpFrame + 1) {
-            height = 42;
-            yShift = 10;
         } else {
-            if (debug) {
-                printf("no collision\n");
-            }
-            return false;
+            jumpFrame = i;
+            break;
         }
 
-        if (jumpFrame != -1 && i >= jumpFrame) {
-            angle += 0x12C * strainDir;
-        }
+        xzSpeed = std::min(xzSpeed + 2.0f, 9.0f);
+    }
 
-        ySpeed = std::max(ySpeed, -4.0f);
+    Vec3f jumpPos = pos;
+    u16 jumpAngle = angle;
+    if (!(jumpFrame == 5 || jumpFrame == 8 || jumpFrame == 9)) {
+        if (debug) {
+            printf("bad jump jumpFrame=%d\n", jumpFrame);
+        }
+        return false;
     }
 
     if (debug) {
-        printf("max iteration count reached?\n");
+        printf("jump frame: x=%.9g y=%.9g z=%.9g\n", pos.x, pos.y, pos.z);
+    }
+
+    for (int strainDir : {-1, 1}) {
+        pos = jumpPos;
+        angle = jumpAngle + 0x12c * strainDir;
+
+        Vec3f bodyPush = immovablePush(pos, Vec3f(horseBody), 20.0f);
+        pos = translate(pos, angle, 6.0f, 6.5f, bodyPush);
+
+        if (debug) {
+            printf("test push: strainDir=%d x=%.9g y=%.9g z=%.9g\n", strainDir, pos.x, pos.y, pos.z);
+        }
+
+        for (int neighFrame : {27, 28}) {
+            if (neighFrame == 28 && jumpFrame != 8) {
+                continue;
+            }
+
+            Vec3s posTrunc = pos.toVec3s();
+            Vec3s headPos = horseHead[neighFrame];
+            if (posTrunc.x == headPos.x + 1 && posTrunc.z == headPos.z + 2) {
+                if (debug) {
+                    printf("success neighFrame=%d\n", neighFrame);
+                }
+                *outNeighFrame = neighFrame;
+                *outStrainDir = strainDir;
+                return true;
+            }
+        }
+    }
+
+    if (debug) {
+        printf("no push\n");
     }
     return false;
 }
@@ -353,15 +334,14 @@ void searchRolls(Vec3f horsePos, u16 horseAngle) {
     std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
 
     searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
-        Vec3f pos = {x, 37, z};
         bool found = false;
-        for (int neighFrame = 14; neighFrame < 20; neighFrame++) {
-            for (int strainDir : {-1, 1}) {
-                if (simulateRoll(pos, angle, horseBody, horseHeads, neighFrame, strainDir, false)) {
-                    printf("angle=%04x x=%.9g z=%.9g neighFrame=%d strainDir=%d\n", angle, x, z, neighFrame, strainDir);
-                    found = true;
-                }
-            }
+
+        Vec3f pos = {x, 37, z};
+        int neighFrame;
+        int strainDir;
+        if (simulateRoll(pos, angle, horseBody, horseHeads, &neighFrame, &strainDir, false)) {
+            printf("angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x neighFrame=%d strainDir=%d\n", angle, x, z, floatToInt(x), floatToInt(z), neighFrame, strainDir);
+            found = true;
         }
         return found;
     });
@@ -376,7 +356,9 @@ int main(int argc, char* argv[]) {
 
     // Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
     // std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
-    // simulateRoll(linkPos, linkAngle, horseBody, horseHeads, 17, 1, true);
+    // int neighFrame;
+    // int strainDir;
+    // simulateRoll(linkPos, linkAngle, horseBody, horseHeads, &neighFrame, &strainDir, true);
 
     searchRolls(horsePos, horseAngle);
 
