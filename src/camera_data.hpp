@@ -29,8 +29,22 @@ struct CameraZParallelSettings {
   s16 groundAtLerpStepScale;
 };
 
+struct CameraJumpSettings {
+  s16 yOffset;
+  s16 eyeDist;
+  s16 eyeDistNext;
+  s16 yawUpdateRateTarget;
+  s16 maxYawUpdate;
+  s16 fov;
+  s16 atLerpStepScale;
+  s16 interfaceField;
+};
+
 // Normal mode data
 extern CameraNormalSettings cameraNormalSettings[];
 
 // Z-target mode data
 extern CameraZParallelSettings cameraZParallelSettings[];
+
+// Jump mode data
+extern CameraJumpSettings cameraJumpSettings[];
