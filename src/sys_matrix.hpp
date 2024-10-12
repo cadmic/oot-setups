@@ -26,6 +26,7 @@ void Matrix_SetTranslateRotateYXZ(f32 translateX, f32 translateY,
 
 void Matrix_MultVec3f(Vec3f* src, Vec3f* dest);
 void Matrix_MtxFCopy(MtxF* dest, MtxF* src);
+void Matrix_MtxToMtxF(Mtx* src, MtxF* dest);
 
 void Matrix_MultVec3fExt(Vec3f* src, Vec3f* dest, MtxF* mf);
 void Matrix_Transpose(MtxF* mf);

@@ -581,6 +581,28 @@ void Matrix_MtxFCopy(MtxF* dest, MtxF* src) {
   dest->ww = src->ww;
 }
 
+void Matrix_MtxToMtxF(Mtx* src, MtxF* dest) {
+  u16* m1 = &src->intPart[0][0];
+  u16* m2 = &src->fracPart[0][0];
+
+  dest->xx = ((m1[0] << 0x10) | m2[0]) * (1 / 65536.0f);
+  dest->yx = ((m1[1] << 0x10) | m2[1]) * (1 / 65536.0f);
+  dest->zx = ((m1[2] << 0x10) | m2[2]) * (1 / 65536.0f);
+  dest->wx = ((m1[3] << 0x10) | m2[3]) * (1 / 65536.0f);
+  dest->xy = ((m1[4] << 0x10) | m2[4]) * (1 / 65536.0f);
+  dest->yy = ((m1[5] << 0x10) | m2[5]) * (1 / 65536.0f);
+  dest->zy = ((m1[6] << 0x10) | m2[6]) * (1 / 65536.0f);
+  dest->wy = ((m1[7] << 0x10) | m2[7]) * (1 / 65536.0f);
+  dest->xz = ((m1[8] << 0x10) | m2[8]) * (1 / 65536.0f);
+  dest->yz = ((m1[9] << 0x10) | m2[9]) * (1 / 65536.0f);
+  dest->zz = ((m1[10] << 0x10) | m2[10]) * (1 / 65536.0f);
+  dest->wz = ((m1[11] << 0x10) | m2[11]) * (1 / 65536.0f);
+  dest->xw = ((m1[12] << 0x10) | m2[12]) * (1 / 65536.0f);
+  dest->yw = ((m1[13] << 0x10) | m2[13]) * (1 / 65536.0f);
+  dest->zw = ((m1[14] << 0x10) | m2[14]) * (1 / 65536.0f);
+  dest->ww = ((m1[15] << 0x10) | m2[15]) * (1 / 65536.0f);
+}
+
 void Matrix_MultVec3fExt(Vec3f* src, Vec3f* dest, MtxF* mf) {
   dest->x = mf->xw + (mf->xx * src->x + mf->xy * src->y + mf->xz * src->z);
   dest->y = mf->yw + (mf->yx * src->x + mf->yy * src->y + mf->yz * src->z);

@@ -38,6 +38,11 @@ typedef uint64_t u64;
 typedef float f32;
 typedef double f64;
 
+struct Mtx {
+    u16 intPart[4][4];
+    u16 fracPart[4][4];
+};
+
 struct MtxF {
   // Note: The order displayed here is the transpose of the order in which
   // matrices are typically written. For example, [xw, yw, zw] is the
