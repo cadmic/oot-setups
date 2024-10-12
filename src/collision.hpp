@@ -103,8 +103,11 @@ struct Collision {
   // TODO: these functions need better names and more consistency
 
   // Run wall and ceiling checks, displacing the intended position
+  Vec3f runChecks(Vec3f prevPos, Vec3f intendedPos, f32 wallCheckHeight, f32 wallCheckRadius,
+                  CollisionPoly** wallPoly, CollisionPoly** floorPoly, int* dynaId, f32* floorHeight);
   Vec3f runChecks(Vec3f prevPos, Vec3f intendedPos, CollisionPoly** wallPoly,
                   CollisionPoly** floorPoly, int* dynaId, f32* floorHeight);
+  Vec3f runChecks(Vec3f prevPos, Vec3f intendedPos, f32 wallCheckHeight, f32 wallCheckRadius);
   Vec3f runChecks(Vec3f prevPos, Vec3f intendedPos);
   // Snap down to the nearest floor below the given position
   Vec3f findFloor(Vec3f pos, CollisionPoly** outPoly, int* dynaId);

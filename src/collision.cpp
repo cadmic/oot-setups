@@ -443,10 +443,7 @@ bool BgCheck_SphVsDynaWall(Collision* col, Vec3f pos, f32 radius, f32* x,
 }
 
 bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
-                             Vec3f* posResult, CollisionPoly** wallPoly) {
-  f32 radius = col->age == PLAYER_AGE_CHILD ? 14.0f : 18.0f;
-  f32 checkHeight = 26.0f;
-
+                             Vec3f* posResult, f32 checkHeight, f32 radius, CollisionPoly** wallPoly) {
   CollisionPoly* poly;
   int dynaId;
 
@@ -517,6 +514,7 @@ bool BgCheck_EntitySphVsWall(Collision* col, Vec3f posPrev, Vec3f posNext,
                             &posResult->z, &poly)) {
     result = true;
     dynaResult = true;
+    *wallPoly = poly;
     sphCenter = *posResult;
     sphCenter.y += checkHeight;
   }
@@ -838,7 +836,7 @@ void Collision::updateDynapoly(int dynaId, CollisionHeader* header, Vec3f scale,
   std::reverse(dyna->walls.begin(), dyna->walls.end());
 }
 
-Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
+Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos, f32 wallCheckHeight, f32 wallRadius,
                            CollisionPoly** wallPoly, CollisionPoly** floorPoly,
                            int* dynaId, f32* floorHeight) {
   *wallPoly = NULL;
@@ -847,7 +845,7 @@ Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
 
   // Check walls
   Vec3f wallResult;
-  if (BgCheck_EntitySphVsWall(this, prevPos, intendedPos, &wallResult,
+  if (BgCheck_EntitySphVsWall(this, prevPos, intendedPos, &wallResult, wallCheckHeight, wallRadius,
                               wallPoly)) {
     intendedPos = wallResult;
   }
@@ -865,6 +863,24 @@ Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
   // TODO: check ceilings
 
   return intendedPos;
+}
+
+Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos,
+                           CollisionPoly** wallPoly, CollisionPoly** floorPoly,
+                           int* dynaId, f32* floorHeight) {
+  f32 checkHeight = 26.0f;
+  f32 radius = this->age == PLAYER_AGE_CHILD ? 14.0f : 18.0f;
+  return runChecks(prevPos, intendedPos, checkHeight, radius, wallPoly, floorPoly,
+                   dynaId, floorHeight);
+}
+
+Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos, f32 wallCheckRadius, f32 wallCheckHeight) {
+  CollisionPoly* wallPoly;
+  CollisionPoly* floorPoly;
+  int dynaId;
+  f32 floorHeight;
+  return runChecks(prevPos, intendedPos, wallCheckRadius, wallCheckHeight, &wallPoly, &floorPoly, &dynaId,
+                   &floorHeight);
 }
 
 Vec3f Collision::runChecks(Vec3f prevPos, Vec3f intendedPos) {
