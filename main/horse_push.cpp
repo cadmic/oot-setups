@@ -1,8 +1,11 @@
 #include "actor.hpp"
 #include "animation.hpp"
+#include "camera.hpp"
+#include "collision_data.hpp"
 #include "collider.hpp"
 #include "search.hpp"
 #include "sys_math.hpp"
+#include "view.hpp"
 
 Limb gHorseIngoSkel[] = {
     { { 0, 4820, -1965 }, 0x01, LIMB_DONE },
@@ -198,6 +201,48 @@ AnimationHeader gHorseIngoRearingAnim = {
     33, sHorseIngoRearingAnimFrameData, sHorseIngoRearingAnimJointIndices, 4
 };
 
+BgCamInfo gJumpableHorseFenceColCamDataList[] = {
+    { 0x0000, 0, NULL },
+};
+
+SurfaceType gJumpableHorseFenceColSurfaceType[] = {
+    {0x00200000, 0x000007C0},   {0x00000000, 0x000007C0},
+};
+
+CollisionPoly gJumpableHorseFenceColPolygons[] = {
+    {0x0000, 0x2000, 0x0001, 0x0002, 0x0000, 0x0000, 0x7FFF, 0xFF9C},
+    {0x0000, 0x2000, 0x0002, 0x0003, 0x0000, 0x0000, 0x7FFF, 0xFF9C},
+    {0x0000, 0x2004, 0x0005, 0x0006, 0x0000, 0x0000, 0x8001, 0xFF9C},
+    {0x0000, 0x2004, 0x0006, 0x0007, 0x0000, 0x0000, 0x8001, 0xFF9C},
+    {0x0001, 0x2002, 0x0005, 0x0004, 0x0000, 0x7FFF, 0x0000, 0xFD80},
+    {0x0001, 0x2002, 0x0004, 0x0003, 0x0000, 0x7FFF, 0x0000, 0xFD80},
+    {0x0000, 0x2001, 0x0006, 0x0005, 0x7FFF, 0x0000, 0x0000, 0xF9C0},
+    {0x0000, 0x2001, 0x0005, 0x0002, 0x7FFF, 0x0000, 0x0000, 0xF9C0},
+    {0x0000, 0x2007, 0x0000, 0x0003, 0x8001, 0x0000, 0x0000, 0xF9C0},
+    {0x0000, 0x2007, 0x0003, 0x0004, 0x8001, 0x0000, 0x0000, 0xF9C0},
+};
+
+Vec3s gJumpableHorseFenceColVertices[] = {
+    {  -1600,      0,    100 },
+    {   1600,      0,    100 },
+    {   1600,    640,    100 },
+    {  -1600,    640,    100 },
+    {  -1600,    640,   -100 },
+    {   1600,    640,   -100 },
+    {   1600,      0,   -100 },
+    {  -1600,      0,   -100 },
+};
+
+CollisionHeader gJumpableHorseFenceCol = {
+    { -1600, 0, -100 },
+    { 1600, 800, 100 },
+    ARRAY_COUNT(gJumpableHorseFenceColVertices), gJumpableHorseFenceColVertices,
+    ARRAY_COUNT(gJumpableHorseFenceColPolygons), gJumpableHorseFenceColPolygons,
+    gJumpableHorseFenceColSurfaceType,
+    gJumpableHorseFenceColCamDataList,
+    0, NULL
+};
+
 // height, yshift
 std::vector<std::pair<int, int>> rollCylinders = {
     { 46, 12 },
@@ -320,8 +365,8 @@ std::vector<Vec3s> generateHorseHeads(Vec3f pos, u16 angle) {
 
 void searchRolls(Vec3f horsePos, u16 horseAngle) {
     PosAngleRange range = {
-        .angleMin = -0x0800,
-        .angleMax = 0x0800,
+        .angleMin = 0x0000,
+        .angleMax = 0x1000,
         .xMin = 284,
         .xMax = 306,
         .xStep = 0.1f,
@@ -347,20 +392,52 @@ void searchRolls(Vec3f horsePos, u16 horseAngle) {
     });
 }
 
-int main(int argc, char* argv[]) {
-    Vec3f horsePos = {intToFloat(0x437a85b0), 0, intToFloat(0xc44a1b56)};
-    u16 horseAngle = 0x48b1;
+void testCulling(Collision* col) {
+    Vec3f pos = {293, 37, -839};
 
+    Vec3f horseSpawn = {124, 0, -1343};
+    CullZone horseZone = {1000, 1200, 300};
+    Vec3f eponaSpawn = {0, 0, -500};
+    CullZone eponaZone = {1000, 600, 300};
+
+    for (u16 angle = 0x3000; angle <= 0x5000; angle += 16) {
+        Camera camera(col);
+
+        camera.initParallel(pos, angle, 1);
+        for (int i = 0; i < 200; i++) {
+            camera.updateNormal(pos, angle, 1);
+        }
+
+        f32 fovy = 60.0f;
+        bool horseCull = isCulled(&camera, &horseZone, horseSpawn, fovy, 10.0f, 1280.0f);
+        bool eponaCull = isCulled(&camera, &eponaZone, eponaSpawn, fovy, 10.0f, 1280.0f);
+        bool bothCull = horseCull && eponaCull;
+        printf("angle=%04x eye.x=%.9g eye.y=%.9g eye.z=%.9g horseCull=%d eponaCull=%d bothCull=%d\n", angle,
+            camera.eye.x, camera.eye.y, camera.eye.z, horseCull, eponaCull, bothCull);
+    }
+}
+
+int main(int argc, char* argv[]) {
+    Collision col(&spot20_sceneCollisionHeader_002948, PLAYER_AGE_ADULT);
+    col.addDynapoly(&gJumpableHorseFenceCol, {0.1f, 0.1f, 0.1f}, {0, 0x4000, 0}, {295, -27, -989});
+    col.addPoly(15);
+    // col.printPolys();
+
+    // Vec3f horsePos = {intToFloat(0x437a85b0), 0, intToFloat(0xc44a1b56)};
+    // u16 horseAngle = 0x48b1;
     // Vec3f linkPos = {intToFloat(0x43954000), 37, intToFloat(0xc45ed814)};
     // u16 linkAngle = 0xf93e;
-
     // Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
     // std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
     // int neighFrame;
     // int strainDir;
     // simulateRoll(linkPos, linkAngle, horseBody, horseHeads, &neighFrame, &strainDir, true);
 
+    Vec3f horsePos = {260.5f, 0, -808.5f};
+    u16 horseAngle = 0x4800;
     searchRolls(horsePos, horseAngle);
+
+    // testCulling(&col);
 
     return 0;
 }
