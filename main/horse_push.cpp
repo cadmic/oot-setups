@@ -505,6 +505,59 @@ void searchRolls(Collision* col) {
     }
 }
 
+void searchRollsWithHorsePosition(Collision* col, Vec3f horsePos, u16 horseAngle) {
+    PosAngleRange range = {
+        .angleMin = 0x3800,
+        .angleMax = 0x5800,
+        .xMin = 284,
+        .xMax = 306,
+        .xStep = 0.2f,
+        .zMin = -920,
+        .zMax = -828,
+        .zStep = 0.2f,
+    };
+
+    Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+    std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
+    searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
+        bool found = false;
+
+        Vec3f pos = {x, 37, z};
+        int neighFrame;
+        int strainDir;
+        bool nonCrit;
+        if (testSetup(col, pos, angle, horseBody, horseHeads, &neighFrame, &strainDir, &nonCrit, false)) {
+            printf("horseAngle=%04x horseX=%.9g horseZ=%.9g angle=%04x x=%.9g z=%.9g x_raw=%08x z_raw=%08x neighFrame=%d strainDir=%d nonCrit=%d\n",
+                horseAngle, horsePos.x, horsePos.z, angle, x, z, floatToInt(x), floatToInt(z), neighFrame, strainDir, nonCrit);
+            found = true;
+        }
+        return found;
+    });
+}
+
+void searchRollsWithHorseSetups(Collision* col) {
+    Vec3f horsePos;
+
+    horsePos = {intToFloat(0x438abc9f), 0, intToFloat(0xc44a82c4)};
+    for (u16 horseAngle = 0x440a; horseAngle <= 0x553a; horseAngle += 0x320) {
+        fprintf(stderr, "horse: angle=%04x x=%.9g (%08x) z=%.9g (%08x)\n", horseAngle, horsePos.x, floatToInt(horsePos.x), horsePos.z, floatToInt(horsePos.z));
+        searchRollsWithHorsePosition(col, horsePos, horseAngle);
+    }
+
+    horsePos = {intToFloat(0x4395fced), 0, intToFloat(0xc443f17c)};
+    for (u16 horseAngle = 0x715a; horseAngle <= 0x8d7a; horseAngle += 0x320) {
+        fprintf(stderr, "horse: angle=%04x x=%.9g (%08x) z=%.9g (%08x)\n", horseAngle, horsePos.x, floatToInt(horsePos.x), horsePos.z, floatToInt(horsePos.z));
+        searchRollsWithHorsePosition(col, horsePos, horseAngle);
+    }
+
+    horsePos = {intToFloat(0x43944a65), 0, intToFloat(0xc444670c)};
+    for (u16 horseAngle = 0x67fa; horseAngle <= 0x779a; horseAngle += 0x320) {
+        fprintf(stderr, "horse: angle=%04x x=%.9g (%08x) z=%.9g (%08x)\n", horseAngle, horsePos.x, floatToInt(horsePos.x), horsePos.z, floatToInt(horsePos.z));
+        searchRollsWithHorsePosition(col, horsePos, horseAngle);
+    }
+}
+
+
 void testCulling(Collision* col) {
     Vec3f pos = {293, 37, -839};
 
@@ -752,7 +805,9 @@ int main(int argc, char* argv[]) {
     // testCulling(&col);
 
     // testHorse(&col);
-    testHorseWalks(&col);
+    // testHorseWalks(&col);
+
+    searchRollsWithHorseSetups(&col);
 
     return 0;
 }
