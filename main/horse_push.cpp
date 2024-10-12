@@ -475,15 +475,7 @@ void searchRolls(Collision* col) {
         for (f32 horseX = 245; horseX <= 365; horseX += 5) {
             for (f32 horseZ = -829; horseZ <= -769; horseZ += 5) {
                 Vec3f horsePos = {horseX, 0, horseZ};
-                Vec3f corner1 = {285, 0, -829};
-                Vec3f corner2 = {305, 0, -829};
-                if (Math3D_Vec3f_DistXYZ(&horsePos, &corner1) < 35.0f) {
-                    continue;
-                }
-                if (Math3D_Vec3f_DistXYZ(&horsePos, &corner2) < 35.0f) {
-                    continue;
-                }
-                if (horseX >= 285 && horseX <= 305 && horseZ <= -829 + 35) {
+                if (col->runChecks(horsePos, translate(horsePos, horseAngle, 0, -7.5f), 19.0f, 35.0f) != horsePos) {
                     continue;
                 }
 
@@ -538,9 +530,198 @@ void testCulling(Collision* col) {
     }
 }
 
+enum EnHorseAction {
+    /*  0 */ ENHORSE_ACT_FROZEN,
+    /*  1 */ ENHORSE_ACT_INACTIVE,
+    /*  2 */ ENHORSE_ACT_IDLE,
+    /*  3 */ ENHORSE_ACT_FOLLOW_PLAYER,
+    /*  4 */ ENHORSE_ACT_INGO_RACE,
+    /*  5 */ ENHORSE_ACT_MOUNTED_IDLE,
+    /*  6 */ ENHORSE_ACT_MOUNTED_IDLE_WHINNEYING,
+    /*  7 */ ENHORSE_ACT_MOUNTED_TURN,
+    /*  8 */ ENHORSE_ACT_MOUNTED_WALK,
+    /*  9 */ ENHORSE_ACT_MOUNTED_TROT,
+    /* 10 */ ENHORSE_ACT_MOUNTED_GALLOP,
+    /* 11 */ ENHORSE_ACT_MOUNTED_REARING,
+    /* 12 */ ENHORSE_ACT_STOPPING,
+    /* 13 */ ENHORSE_ACT_REVERSE,
+    /* 14 */ ENHORSE_ACT_LOW_JUMP,
+    /* 15 */ ENHORSE_ACT_HIGH_JUMP,
+    /* 16 */ ENHORSE_ACT_BRIDGE_JUMP,
+    /* 17 */ ENHORSE_ACT_CS_UPDATE,
+    /* 18 */ ENHORSE_ACT_HBA,
+    /* 19 */ ENHORSE_ACT_FLEE_PLAYER
+};
+
+struct EnHorse {
+    EnHorseAction action = ENHORSE_ACT_MOUNTED_IDLE;
+    Vec3f pos;
+    u16 angle;
+    f32 speed = 0.0f;
+    f32 animEndFrame = 0.0f;
+    f32 animCurFrame = 0.0f;
+    f32 animPlaySpeed = 1.0f;
+
+    EnHorse(Vec3f pos, u16 angle) : pos(pos), angle(angle) {}
+
+    void setupAction(EnHorseAction action, f32 animEndFrame) {
+        this->action = action;
+        this->animEndFrame = animEndFrame;
+        this->animCurFrame = 0.0f;
+        this->animPlaySpeed = 1.0f;
+    }
+
+    bool updateAnim() {
+        if (this->animCurFrame == this->animEndFrame) {
+            return true;
+        }
+
+        this->animCurFrame += this->animPlaySpeed;
+        if (this->animCurFrame >= this->animEndFrame) {
+            this->animCurFrame = this->animEndFrame;
+        }
+        return false;
+    }
+
+    void updateSpeed(bool holdUp, f32 brakeDecel, f32 decel, f32 baseSpeed) {
+        // TODO: EnHorse_SlopeSpeedMultiplier
+        if (!holdUp) {
+            this->speed -= decel;
+            if (this->speed < 0.0f) {
+                this->speed = 0.0f;
+            }
+        } else {
+            f32 stickMag = 60.0f;
+            this->speed += (this->speed <= baseSpeed * (1.0f / 54.0f) * stickMag ? 1.0f : -1.0f) * 50.0f * 0.01f;
+            if (baseSpeed < this->speed) {
+                this->speed -= decel;
+                if (this->speed < baseSpeed) {
+                    this->speed = baseSpeed;
+                }
+            }
+        }
+    }
+
+    bool update(Collision* col, bool holdUp) {
+        switch (this->action) {
+            case ENHORSE_ACT_MOUNTED_IDLE:
+                this->speed = 0.0f;
+                if (holdUp) {
+                    // TODO: Should wait for 8 frames
+                    this->setupAction(ENHORSE_ACT_MOUNTED_WALK, 34.0f);
+                }
+                break;
+            case ENHORSE_ACT_MOUNTED_WALK:
+                this->updateSpeed(holdUp, 0.3f, 0.06f, 3.0f);
+                if (this->speed == 0.0f) {
+                    this->setupAction(ENHORSE_ACT_MOUNTED_IDLE, 0.0f);
+                } else if (this->speed > 3.0f) {
+                    this->setupAction(ENHORSE_ACT_MOUNTED_TROT, 28.0f);
+                }
+                this->animPlaySpeed = this->speed * 0.75f;
+                if (this->updateAnim()) {
+                    if (this->speed > 3.0f) {
+                        this->setupAction(ENHORSE_ACT_MOUNTED_TROT, 28.0f);
+                    } else if (!holdUp) {
+                        this->setupAction(ENHORSE_ACT_MOUNTED_IDLE, 0.0f);
+                    } else {
+                        this->setupAction(ENHORSE_ACT_MOUNTED_WALK, 34.0f);
+                    }
+                }
+                break;
+            case ENHORSE_ACT_MOUNTED_TROT:
+                this->updateSpeed(holdUp, 0.3f, 0.06f, 6.0f);
+                if (this->speed < 3.0f) {
+                    this->setupAction(ENHORSE_ACT_MOUNTED_WALK, 34.0f);
+                }
+
+                this->animPlaySpeed = this->speed * 0.375f;
+                if (this->updateAnim()) {
+                    if (this->speed >= 6.0f) {
+                        this->setupAction(ENHORSE_ACT_MOUNTED_GALLOP, 23.0f);
+                    } else {
+                        this->setupAction(ENHORSE_ACT_MOUNTED_TROT, 28.0f);
+                    }
+                }
+                break;
+            case ENHORSE_ACT_MOUNTED_GALLOP:
+                this->updateSpeed(holdUp, 0.3f, 0.06f, 8.0f);
+                if (this->speed < 6.0f) {
+                    this->setupAction(ENHORSE_ACT_MOUNTED_TROT, 28.0f);
+                }
+
+                this->animPlaySpeed = this->speed * 0.3f;
+                if (this->updateAnim()) {
+                    // TODO: braking?
+                    if (this->speed < 6.0f) {
+                        this->setupAction(ENHORSE_ACT_MOUNTED_TROT, 28.0f);
+                    } else {
+                        this->setupAction(ENHORSE_ACT_MOUNTED_GALLOP, 23.0f);
+                    }
+                }
+                break;
+            default:
+                return false;
+        }
+
+        CollisionPoly* wallPoly;
+        CollisionPoly* floorPoly;
+        int dynaId;
+        f32 floorHeight;
+        this->pos = col->runChecks(this->pos, translate(this->pos, this->angle, this->speed, -7.5f), 19.0f, 35.0f,
+            &wallPoly, &floorPoly, &dynaId, &floorHeight);
+
+        if (wallPoly != nullptr) {
+            Vec3f normal = CollisionPoly_GetNormalF(wallPoly);
+            u16 wallYaw = Math_Atan2S(normal.z, normal.x);
+            if (Math_CosS(wallYaw - this->angle) < -0.3f && this->speed > 4.0f) {
+                this->speed -= 1.0f;
+            }
+        }
+
+        return true;
+    }
+};
+
+void testHorse(Collision* col) {
+    EnHorse horse({intToFloat(0xc394843e), 0, intToFloat(0xc4a0ecd4)}, 0x297a);
+
+    for (int i = 9; i < 200; i++) {
+        bool holdUp = i <= 35;
+        if (!horse.update(col, holdUp)) {
+            break;
+        }
+        if (i > 10 && horse.speed == 0.0f) {
+            break;
+        }
+        printf("frame %d: holdUp=%d x=%.9g y=%.9g z=%.9g action=%d speed=%.2f animEndFrame=%.0f animCurFrame=%.3f animPlaySpeed=%.3f\n",
+            i, holdUp, horse.pos.x, horse.pos.y, horse.pos.z, horse.action, horse.speed, horse.animEndFrame, horse.animCurFrame, horse.animPlaySpeed);
+    }
+}
+
+void testHorseWalks(Collision* col) {
+    for (u16 angle = 0x265a - 0x320; angle <= 0x265a; angle += 0x320) {
+        for (int holdUpFrames = 20; holdUpFrames <= 55; holdUpFrames++) {
+            EnHorse horse({intToFloat(0xc394843e), 0, intToFloat(0xc4a0ecd4)}, angle);
+            for (int i = 9; i < 200; i++) {
+                bool holdUp = i <= holdUpFrames;
+                if (!horse.update(col, holdUp)) {
+                    break;
+                }
+                if (i > 10 && horse.speed == 0.0f) {
+                    break;
+                }
+            }
+            printf("angle=%04x holdUpFrames=%d x=%.9g (%08x) z=%.9g (%08x)\n",
+                angle, holdUpFrames, horse.pos.x, floatToInt(horse.pos.x), horse.pos.z, floatToInt(horse.pos.z));
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     Collision col(&spot20_sceneCollisionHeader_002948, PLAYER_AGE_ADULT);
     col.addDynapoly(&gJumpableHorseFenceCol, {0.1f, 0.1f, 0.1f}, {0, 0x4000, 0}, {295, -27, -989});
+    col.addPoly(1);
     col.addPoly(15);
     // col.printPolys();
 
@@ -566,9 +747,12 @@ int main(int argc, char* argv[]) {
     // bool nonCrit;
     // testSetup(&col, linkPos, linkAngle, horseBody, horseHeads, &neighFrame, &strainDir, &nonCrit, true);
 
-    searchRolls(&col);
+    // searchRolls(&col);
 
     // testCulling(&col);
+
+    // testHorse(&col);
+    testHorseWalks(&col);
 
     return 0;
 }
