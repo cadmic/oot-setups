@@ -11,11 +11,12 @@ struct Camera {
   Collision* col;             // Collision data
   f32 playerHeight;           // Adult or child height (constant)
 
-  Vec3f playerPos;  // Last player position
-  Vec3f atOffset;   // Offset from player
-  Vec3f at;         // Where the camera's looking at
-  Vec3f eyeNext;    // Where the camera wants to be
-  Vec3f eye;        // Where the camera is
+  Vec3f prevPlayerPos;  // Previous player position
+  Vec3f playerPos;      // Last player position
+  Vec3f atOffset;       // Offset from player
+  Vec3f at;             // Where the camera's looking at
+  Vec3f eyeNext;        // Where the camera wants to be
+  Vec3f eye;            // Where the camera is
   f32 xzSpeed;
   f32 speedRatio;
 
@@ -34,6 +35,9 @@ struct Camera {
   // Parallel mode variables
   int parallelAnimTimer;  // rwData->animTimer in decomp
   f32 parallelYawTarget;  // rwData->yawTarget in decomp
+
+  // Jump mode variables
+  f32 jumpStartY;  // rwData->unk_1C in decomp
 
   // In the game, these variables are static and only sometimes updated
   // depending on the global frame counter
@@ -55,9 +59,12 @@ struct Camera {
   // Update the camera.
   void update(Vec3f pos, u16 angle, int setting, int mode);
 
-  // Aliases for mode 0 and 1
+  // Alias for mode 0
   void updateNormal(Vec3f pos, u16 angle, int setting);
+  // Alias for mode 1
   void updateParallel(Vec3f pos, u16 angle, int setting);
+  // Alias for mode 13
+  void updateJump(Vec3f pos, u16 angle, int setting);
 
   // Get the current camera angle.
   u16 yaw();
