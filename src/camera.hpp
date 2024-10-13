@@ -31,6 +31,8 @@ struct Camera {
   f32 normalYawUpdateRateTarget;  // rwData->swing.swingUpdateRate in decomp
   s16 normalRUpdateRateTimer;     // rwData->unk_28 in decomp
   s16 normalSlopePitchAdj;        // rwData->slopePitchAdj in decomp
+  s16 normalSwingYawTarget;       // rwData->swingYawTarget in decomp
+  s16 normalStartSwingTimer;      // rwData->startSwingTimer in decomp
 
   // Parallel mode variables
   int parallelAnimTimer;  // rwData->animTimer in decomp
