@@ -79,6 +79,10 @@ void applySkeleton(Limb* skeleton, Vec3s* jointTable, Vec3f pos, u16 angle,
 void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
                     MtxF* outLimbMatrices);
 
+// Apply animation frame for a "skin" skeleton, outputting matrices for each limb.
+void applySkinSkeleton(Limb* skeleton, int limbCount, Vec3s* jointTable, Vec3f pos, u16 angle,
+                       Vec3f rootPos, MtxF* outMatrix, MtxF* outLimbMatrices);
+
 // Default root translation for Link's skeleton.
 Vec3f baseRootTranslation(PlayerAge age, u16 angle);
 

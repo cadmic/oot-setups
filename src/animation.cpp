@@ -154,6 +154,44 @@ void applyAnimFrame(AnimFrame* animFrame, PlayerAge age, Vec3f pos, u16 angle,
   applySkeleton(skeleton, animFrame->jointTable, pos, angle, rootPos, outLimbMatrices);
 }
 
+void applySkinLimb(Limb* skeleton, MtxF* outLimbMatrices, u8 parentIndex, u8 limbIndex) {
+    Limb* limb = &skeleton[limbIndex];
+    MtxF* mtx;
+
+    if (parentIndex == LIMB_DONE) {
+        SkinMatrix_GetClear(&mtx);
+    } else {
+        mtx = &outLimbMatrices[parentIndex];
+    }
+
+    MtxF sp28;
+    SkinMatrix_MtxFMtxFMult(mtx, &outLimbMatrices[limbIndex], &sp28);
+    SkinMatrix_MtxFCopy(&sp28, &outLimbMatrices[limbIndex]);
+
+    if (limb->child != LIMB_DONE) {
+        applySkinLimb(skeleton, outLimbMatrices, limbIndex, limb->child);
+    }
+
+    if (limb->sibling != LIMB_DONE) {
+        applySkinLimb(skeleton, outLimbMatrices, parentIndex, limb->sibling);
+    }
+}
+
+// See Skin_ApplyAnimTransformations
+void applySkinSkeleton(Limb* skeleton, int limbCount, Vec3s* jointTable, Vec3f pos, u16 angle,
+                       Vec3f rootPos, MtxF* outMatrix, MtxF* outLimbMatrices) {
+
+  SkinMatrix_SetTranslateRotateZYX(&outLimbMatrices[0], jointTable[0].x, jointTable[0].y, jointTable[0].z, rootPos.x, rootPos.y, rootPos.z);
+
+  for (int i = 1; i < limbCount; i++) {
+      SkinMatrix_SetTranslateRotateZYX(&outLimbMatrices[i],
+        jointTable[i].x, jointTable[i].y, jointTable[i].z, skeleton[i].jointPos.x, skeleton[i].jointPos.y, skeleton[i].jointPos.z);
+  }
+
+  SkinMatrix_SetTranslateRotateYXZScale(outMatrix, 0.01f, 0.01f, 0.01f, 0, angle, 0, pos.x, pos.y, pos.z);
+  applySkinLimb(skeleton, outLimbMatrices, LIMB_DONE, 0);
+}
+
 Vec3f baseRootTranslation(PlayerAge age, u16 angle) {
   f32 ageScale = age == PLAYER_AGE_CHILD ? (11.0f / 17.0f) : 1.0f;
   Vec3s baseTranslation = (Vec3f(-57, 3377, 0) * ageScale).toVec3s();

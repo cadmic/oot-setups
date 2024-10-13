@@ -2,6 +2,7 @@
 
 #include "global.hpp"
 
+extern MtxF gMtxFClear;
 extern MtxF* sCurrentMatrix;
 
 typedef enum {
