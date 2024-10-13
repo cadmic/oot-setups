@@ -738,7 +738,7 @@ std::vector<HorsePos> generateHorseSetups() {
     Vec3f horsePos;
 
     horsePos = {intToFloat(0x438abc9f), 0, intToFloat(0xc44a82c4)};
-    for (u16 horseAngle = 0x440a; horseAngle <= 0x553a; horseAngle += 0x320) {
+    for (u16 horseAngle = 0x459a; horseAngle <= 0x585a; horseAngle += 0x320) {
         result.push_back({horsePos, horseAngle});
     }
 
@@ -1008,6 +1008,44 @@ Vec3f getRidePosition(Vec3f pos, u16 angle) {
 
     return ridePos;
 }
+
+struct HorseSetup {
+    u16 angle;
+    f32 horseX;
+    f32 horseY;
+    f32 linkX;
+    f32 linkY;
+};
+
+std::vector<HorseSetup> horseSetups = {
+    // turn to 0x265a
+    // 31 frames up
+    { 0x459a, intToFloat(0x438abc9f), intToFloat(0xc44a82c4), intToFloat(0x438ebc19), intToFloat(0xc442286c) },
+    { 0x48ba, intToFloat(0x438abc9f), intToFloat(0xc44a82c4), intToFloat(0x43900125), intToFloat(0xc44255fa) },
+    { 0x4bda, intToFloat(0x438abc9f), intToFloat(0xc44a82c4), intToFloat(0x43913e3f), intToFloat(0xc4428fe3) },
+    { 0x4efa, intToFloat(0x438abc9f), intToFloat(0xc44a82c4), intToFloat(0x43927171), intToFloat(0xc442d5b8) },
+    { 0x521a, intToFloat(0x438abc9f), intToFloat(0xc44a82c4), intToFloat(0x43939908), intToFloat(0xc443272c) },
+    { 0x553a, intToFloat(0x438abc9f), intToFloat(0xc44a82c4), intToFloat(0x4394b361), intToFloat(0xc44383b6) },
+    { 0x585a, intToFloat(0x438abc9f), intToFloat(0xc44a82c4), intToFloat(0x4395be8f), intToFloat(0xc443ead2) },
+    // 35, 37, 39, 47, 49 frames up
+    { 0x715a, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a69566), intToFloat(0xc441ba0e) },
+    { 0x747a, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a6dfe2), intToFloat(0xc4425eae) },
+    { 0x779a, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a710f4), intToFloat(0xc443059d) },
+    { 0x7aba, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a72847), intToFloat(0xc443adfe) },
+    { 0x7dda, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a725bf), intToFloat(0xc44456c9) },
+    { 0x80fa, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a70a19), intToFloat(0xc444fb7f) },
+    { 0x841a, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a6d45d), intToFloat(0xc445a218) },
+    { 0x873a, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a6855a), intToFloat(0xc446462a) },
+    { 0x8a5a, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a61d42), intToFloat(0xc446e6c2) },
+    { 0x8d7a, intToFloat(0x4395fced), intToFloat(0xc443f17c), intToFloat(0x43a59d03), intToFloat(0xc44782cf) },
+    // 41, 43, 45 frames up
+    { 0x67fa, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a36fa2), intToFloat(0xc440599c) },
+    { 0x6b1a, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a4034d), intToFloat(0xc440f165) },
+    { 0x6e3a, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a47f51), intToFloat(0xc4418e57) },
+    { 0x715a, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a4e2de), intToFloat(0xc4422f9e) },
+    { 0x747a, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a52d5a), intToFloat(0xc442d43e) },
+    { 0x779a, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a55e6c), intToFloat(0xc4437b2d) },
+};
 
 int main(int argc, char* argv[]) {
     Collision col(&spot20_sceneCollisionHeader_002948, PLAYER_AGE_ADULT);
