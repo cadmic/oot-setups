@@ -439,6 +439,7 @@ CollisionHeader gJumpableHorseFenceCol = {
 
 // height, yshift
 std::vector<std::pair<int, int>> rollCylinders = {
+    { 53, 5 },
     { 46, 12 },
     { 45, 11 },
     { 34, 6 },
@@ -455,16 +456,29 @@ std::vector<std::pair<int, int>> rollCylinders = {
     { 33, 5 },
 };
 
-bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s>& horseHead, int* outNeighFrame, int* outStrainDir, bool debug) {
+bool simulateOneRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s>& horseHead,
+                     int targetJumpFrame, int targetNeighFrame, int* outNeighFrame, int* outStrainDir, bool debug) {
+    printf("targetJumpFrame=%d targetNeighFrame=%d\n", targetJumpFrame, targetNeighFrame);
     f32 xzSpeed = 0.0f;
     int jumpFrame = -1;
-    for (int i = 1; i < 10; i++) {
+    int neighFrame = targetNeighFrame - targetJumpFrame - 1;
+
+    for (int i = 1; i < 10; i++, neighFrame++) {
+        s16 height = rollCylinders[i - 1].first;
+        s16 yshift = rollCylinders[i - 1].second;
         if (debug) {
-            printf("roll frame %d: angle=%04x x=%.9g y=%.9g z=%.9g xzSpeed=%.1f\n",
-                i, angle, pos.x, pos.y, pos.z, xzSpeed);
+            printf("roll frame %d: angle=%04x x=%.9g y=%.9g z=%.9g xzSpeed=%.1f height=%d yshift=%d neighFrame=%d\n",
+                i, angle, pos.x, pos.y, pos.z, xzSpeed, height, yshift, neighFrame);
         }
 
+        Vec3s headPos = horseHead[neighFrame];
+        Sphere16 headSph = { headPos, 20 };
+        Cylinder16 linkCyl = { 12, height, yshift, pos.toVec3s() };
+
         Vec3f bodyPush = immovablePush(pos, Vec3f(horseBody), 20.0f);
+        if (colliderSphVsCyl(&headSph, &linkCyl)) {
+            bodyPush = bodyPush + immovablePush(pos, Vec3f(headPos), 20.0f);
+        }
         pos = translate(pos, angle, xzSpeed, -5.0f, bodyPush);
 
         if (pos.x >= 284.0f && pos.x <= 306.0f && pos.z <= -828.0f) {
@@ -479,16 +493,19 @@ bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s
 
     Vec3f jumpPos = pos;
     u16 jumpAngle = angle;
-    if (!(jumpFrame == 5 || jumpFrame == 8 || jumpFrame == 9)) {
+    if (jumpFrame != targetJumpFrame) {
         if (debug) {
             printf("bad jump jumpFrame=%d\n", jumpFrame);
         }
         return false;
     }
 
+    neighFrame++;
     if (debug) {
-        printf("jump frame: x=%.9g y=%.9g z=%.9g\n", pos.x, pos.y, pos.z);
+        printf("jump frame: x=%.9g y=%.9g z=%.9g neighFrame=%d\n", pos.x, pos.y, pos.z, neighFrame);
     }
+
+    neighFrame++;
 
     for (int strainDir : {-1, 1}) {
         pos = jumpPos;
@@ -501,21 +518,15 @@ bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s
             printf("test push: strainDir=%d x=%.9g y=%.9g z=%.9g\n", strainDir, pos.x, pos.y, pos.z);
         }
 
-        for (int neighFrame : {27, 28}) {
-            if (neighFrame == 28 && jumpFrame != 8) {
-                continue;
+        Vec3s posTrunc = pos.toVec3s();
+        Vec3s headPos = horseHead[neighFrame];
+        if (posTrunc.x == headPos.x + 1 && posTrunc.z == headPos.z + 2) {
+            if (debug) {
+                printf("success neighFrame=%d\n", neighFrame);
             }
-
-            Vec3s posTrunc = pos.toVec3s();
-            Vec3s headPos = horseHead[neighFrame];
-            if (posTrunc.x == headPos.x + 1 && posTrunc.z == headPos.z + 2) {
-                if (debug) {
-                    printf("success neighFrame=%d\n", neighFrame);
-                }
-                *outNeighFrame = neighFrame;
-                *outStrainDir = strainDir;
-                return true;
-            }
+            *outNeighFrame = neighFrame;
+            *outStrainDir = strainDir;
+            return true;
         }
     }
 
@@ -523,6 +534,33 @@ bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s
         printf("no push\n");
     }
     return false;
+}
+
+bool simulateRoll(Vec3f pos, u16 angle, Vec3s horseBody, const std::vector<Vec3s>& horseHead, int* outNeighFrame, int* outStrainDir, bool debug) {
+    Vec3f horseHeadPos = Vec3f(horseHead[0]);
+    if (Math_Vec3f_DistXZ(&pos, &horseHeadPos) < 36.0f) {
+        if (debug) {
+            printf("too close to head\n");
+        }
+        return false;
+    }
+
+    Vec3f horseBodyPos = Vec3f(horseBody);
+    if (Math_Vec3f_DistXZ(&pos, &horseBodyPos) < 32.0f) {
+        if (debug) {
+            printf("too close to body\n");
+        }
+        return false;
+    }
+
+    if (simulateOneRoll(pos, angle, horseBody, horseHead, 5, 27, outNeighFrame, outStrainDir, debug) ||
+        simulateOneRoll(pos, angle, horseBody, horseHead, 8, 27, outNeighFrame, outStrainDir, debug) ||
+        simulateOneRoll(pos, angle, horseBody, horseHead, 8, 28, outNeighFrame, outStrainDir, debug) ||
+        simulateOneRoll(pos, angle, horseBody, horseHead, 9, 27, outNeighFrame, outStrainDir, debug)) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool testCull(Camera* camera, f32 fovy, bool debug) {
