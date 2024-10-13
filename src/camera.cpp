@@ -435,6 +435,9 @@ void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
   f32 maxYawUpdate = CAM_DATA_SCALED(settings->maxYawUpdate);
   f32 atLERPScaleMax = CAM_DATA_SCALED(settings->atLerpStepScale);
 
+  VecGeo atEyeGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eye);
+  VecGeo atEyeNextGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eyeNext);
+
   if (camera->mode != 0 || setting != camera->setting) {
     camera->setting = setting;
     camera->mode = 0;
@@ -443,15 +446,22 @@ void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
     camera->normalRUpdateRateTimer = 10;
     camera->normalYawUpdateRateTarget = yawUpdateRateTarget;
     camera->normalSlopePitchAdj = 0;
+    camera->normalSwingYawTarget = atEyeGeo.yaw;
+    camera->normalStartSwingTimer = 40;
   }
 
   if (camera->normalRUpdateRateTimer != 0) {
     camera->normalRUpdateRateTimer--;
   }
 
-  VecGeo atEyeGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eye);
-
-  VecGeo atEyeNextGeo = OLib_Vec3fDiffToVecGeo(&camera->at, &camera->eyeNext);
+  if (camera->xzSpeed > 0.001f) {
+    camera->normalStartSwingTimer = 40;
+  } else if (camera->normalStartSwingTimer > 0) {
+    if (camera->normalStartSwingTimer > 20) {
+      camera->normalSwingYawTarget = atEyeGeo.yaw + (s16)(angle - 0x7FFF - atEyeGeo.yaw) / camera->normalStartSwingTimer;
+    }
+    camera->normalStartSwingTimer--;
+  }
 
   s16 slopePitchTarget =
       Camera_GetPitchAdjFromFloorHeightDiffs(camera, atEyeGeo.yaw - 0x7FFF);
@@ -490,10 +500,17 @@ void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
   camera->pitchUpdateRateInv = Camera_LERPCeilF(
       16.0f, camera->pitchUpdateRateInv, camera->speedRatio * 0.2f, 0.1f);
 
-  eyeAdjustment.yaw = Camera_CalcDefaultYaw(camera, atEyeNextGeo.yaw, angle,
-                                            maxYawUpdate, accel);
-  eyeAdjustment.pitch = Camera_CalcDefaultPitch(
+  if (camera->normalStartSwingTimer <= 0) {
+    eyeAdjustment.yaw = Camera_LERPCeilS(
+        camera->normalSwingYawTarget, atEyeNextGeo.yaw, 1.0f / camera->yawUpdateRateInv, 10);
+    eyeAdjustment.pitch = atEyeNextGeo.pitch;
+  } else {
+    eyeAdjustment.yaw = Camera_CalcDefaultYaw(camera, atEyeNextGeo.yaw, angle,
+                                              maxYawUpdate, accel);
+    eyeAdjustment.pitch = Camera_CalcDefaultPitch(
       camera, atEyeNextGeo.pitch, pitchTarget, camera->normalSlopePitchAdj);
+  }
+
   if (eyeAdjustment.pitch > 0x38A4) {
     eyeAdjustment.pitch = 0x38A4;
   }
@@ -503,7 +520,21 @@ void Camera_Normal1(Camera* camera, Vec3f pos, u16 angle, int setting) {
 
   Camera_AddVecGeoToVec3f(&camera->eyeNext, &camera->at, &eyeAdjustment);
 
-  Camera_UpdateCollision(camera, &eyeAdjustment, distMin, yawUpdateRateTarget);
+  camera->normalSwingYawTarget = angle - 0x7FFF;
+
+  if (camera->normalStartSwingTimer > 0) {
+    Camera_UpdateCollision(camera, &eyeAdjustment, distMin, yawUpdateRateTarget);
+  } else {
+    Vec3f result;
+    Vec3f normal;
+    camera->normalYawUpdateRateTarget = camera->yawUpdateRateInv = yawUpdateRateTarget * 2.0f;
+    if (Camera_BGCheckInfo(camera, camera->at, camera->eyeNext, &result, &normal)) {
+      camera->normalSwingYawTarget = atEyeNextGeo.yaw;
+      camera->normalStartSwingTimer = -1;
+    } else {
+      camera->eye = camera->eyeNext;
+    }
+  }
 
   camera->atLERPStepScale = Camera_ClampLERPScale(camera, atLERPScaleMax);
 }
