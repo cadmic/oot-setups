@@ -1012,9 +1012,9 @@ Vec3f getRidePosition(Vec3f pos, u16 angle) {
 struct HorseSetup {
     u16 angle;
     f32 horseX;
-    f32 horseY;
+    f32 horseZ;
     f32 linkX;
-    f32 linkY;
+    f32 linkZ;
 };
 
 std::vector<HorseSetup> horseSetups = {
@@ -1047,10 +1047,75 @@ std::vector<HorseSetup> horseSetups = {
     { 0x779a, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a55e6c), intToFloat(0xc4437b2d) },
 };
 
+void findSetups(Collision* col, const HorseSetup& horseSetup) {
+    SearchParams params = {
+        .col = col,
+        .minBounds = {-10000, 400, -10000},
+        .maxBounds = {10000, 10000, 10000},
+        .starts =
+            {
+                {{horseSetup.linkX, 0, horseSetup.linkZ}, horseSetup.angle},
+                {{horseSetup.linkX, 0, horseSetup.linkZ}, horseSetup.angle - 0x4000},
+            },
+        .maxCost = 70,
+        .angleMin = 0x3800,
+        .angleMax = 0x5800,
+        .xMin = 284,
+        .xMax = 306,
+        .zMin = -920,
+        .zMax = -828,
+        .actions =
+            {
+                TARGET_WALL,
+                ROLL,
+                BACKFLIP,
+                BACKFLIP_SIDEROLL,
+                BACKFLIP_SIDEROLL_UNTARGET,
+                SIDEHOP_LEFT,
+                SIDEHOP_LEFT_SIDEROLL,
+                SIDEHOP_LEFT_SIDEROLL_UNTARGET,
+                SIDEHOP_RIGHT,
+                SIDEHOP_RIGHT_SIDEROLL,
+                SIDEHOP_RIGHT_SIDEROLL_UNTARGET,
+                ROTATE_ESS_LEFT,
+                ROTATE_ESS_RIGHT,
+                ESS_TURN_UP,
+                ESS_TURN_LEFT,
+                ESS_TURN_RIGHT,
+                ESS_TURN_DOWN,
+            },
+    };
+
+    auto output = [=](Vec3f initialPos, u16 initialAngle,
+                        const PosAngleSetup& setup,
+                        const std::vector<Action>& actions, int cost) {
+        bool found = false;
+        Vec3f pos = setup.pos;
+        u16 angle = setup.angle;
+        if (testJumpslashClip(col, pos, angle, holdUp, false)) {
+            printf(
+                "cost=%d initialx=%.9g (%08x) initialz=%.9g (%08x) "
+                "initialAngle=%04x x=%.9g (%08x) z=%.9g (%08x) angle=%04x "
+                "holdUp=%d actions=%s\n",
+                cost, initialPos.x, floatToInt(initialPos.x), initialPos.z,
+                floatToInt(initialPos.z), initialAngle, pos.x, floatToInt(pos.x),
+                pos.z, floatToInt(pos.z), angle, holdUp,
+                actionNames(actions).c_str());
+            fflush(stdout);
+            found = true;
+        }
+
+        return found;
+    };
+
+    searchSetups(params, output);
+}
+
 int main(int argc, char* argv[]) {
     Collision col(&spot20_sceneCollisionHeader_002948, PLAYER_AGE_ADULT);
     col.addDynapoly(&gJumpableHorseFenceCol, {0.1f, 0.1f, 0.1f}, {0, 0x4000, 0}, {295, -27, -989});
     col.addPoly(1);
+    col.addPoly(13);
     col.addPoly(15);
     // col.printPolys();
 
