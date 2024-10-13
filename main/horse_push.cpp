@@ -1123,7 +1123,9 @@ std::vector<HorseSetup> horseSetups = {
     { 0x7aba, intToFloat(0x43944a65), intToFloat(0xc444670c), intToFloat(0x43a575bf), intToFloat(0xc444238e) },
 };
 
-void findSetups(Collision* col, const HorseSetup& horseSetup) {
+extern Vec3f gHorseHead;
+
+void findSetups(Collision* col, const HorseSetup& horseSetup, int shard) {
     u16 horseAngle = horseSetup.angle;
     Vec3f horsePos = {horseSetup.horseX, 0, horseSetup.horseZ};
     Vec3f linkPos = {horseSetup.linkX, 0, horseSetup.linkZ};
@@ -1131,6 +1133,8 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
     Vec3s horseBody1 = generateHorseBody1(horsePos, horseAngle);
     Vec3s horseBody2 = generateHorseBody2(horsePos, horseAngle);
     std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
+
+    gHorseHead = Vec3f(horseHeads[27]);
 
     SearchParams params = {
         .col = col,
@@ -1143,9 +1147,9 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
         .starts =
             {
                 {linkPos, horseAngle},
-                {linkPos, horseAngle + 0x4000},
+                // {linkPos, horseAngle + 0x4000},
             },
-        .maxCost = 90,
+        .maxCost = 110,
         .angleMin = 0x4000,
         .angleMax = 0x5800,
         .xMin = 284,
@@ -1154,7 +1158,7 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
         .zMax = -828,
         .actions =
             {
-                TARGET_WALL,
+                // TARGET_WALL,
                 ROLL,
                 BACKFLIP,
                 BACKFLIP_SIDEROLL,
@@ -1165,8 +1169,8 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
                 SIDEHOP_RIGHT,
                 SIDEHOP_RIGHT_SIDEROLL,
                 SIDEHOP_RIGHT_SIDEROLL_UNTARGET,
-                HORIZONTAL_SLASH,
-                VERTICAL_SLASH,
+                // HORIZONTAL_SLASH,
+                // VERTICAL_SLASH,
                 ROTATE_ESS_LEFT,
                 ROTATE_ESS_RIGHT,
                 ESS_TURN_UP,
@@ -1180,8 +1184,18 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
                     const PosAngleSetup& setup, const std::vector<Action>& path,
                     int cost) {
     Vec3f pos = setup.pos;
-    Vec3f horseHead = Vec3f(horseHeads[27]);
-    if (Math_Vec3f_DistXZ(&pos, &horseHead) < 40.0f) {
+    u16 angle = setup.angle;
+
+    // TODO: Hackily moved to PosAngleSetup
+    // Vec3f horseHead = Vec3f(horseHeads[27]);
+    // if (Math_Vec3f_DistXZ(&pos, &horseHead) < 40.0f) {
+    //     return false;
+    // }
+
+    // Don't mount horse
+    // TODO: some actions (turns and sword slashes) should be allowed
+    if (Math_Vec3f_DistXZ(&horsePos, &pos) <= 75.0f &&
+        Math_CosS(Math_Vec3f_Yaw(&pos, &horsePos) - angle) >= 0.17364818f) {
         return false;
     }
 
@@ -1199,6 +1213,9 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
         int strainDir;
         bool nonCrit;
         if (testSetup(col, pos, angle, horseBody1, horseHeads, &jumpFrame, &neighFrame, &strainDir, &nonCrit, false)) {
+            if (!nonCrit) {
+                return false;
+            }
             printf(
                 "cost=%d horseX=%.9g (%08x) horseZ=%.9g (%08x) horseAngle=%04x "
                 "initialX=%.9g (%08x) initialZ=%.9g (%08x) initialAngle=%04x "
@@ -1214,7 +1231,7 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
         return found;
     };
 
-    searchSetups(params, filter, output);
+    searchSetupsShard(params, 1, shard, filter, output);
 }
 
 int main(int argc, char* argv[]) {
@@ -1258,8 +1275,10 @@ int main(int argc, char* argv[]) {
     // searchRollsWithHorseSetups(&col);
 
     if (argc > 1) {
-        int index = strtoul(argv[1], NULL, 0);
-        findSetups(&col, horseSetups[index]);
+        int input = strtoul(argv[1], NULL, 0);
+        int index = input / 12;
+        int shard = input % 12;
+        findSetups(&col, horseSetups[index], shard);
     }
 
     return 0;

@@ -234,6 +234,8 @@ bool PosAngleSetup::cameraTurn(u16 offset) {
   return true;
 }
 
+Vec3f gHorseHead;
+
 bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
                          f32 ySpeed, bool* onGround) {
   // printf(
@@ -260,6 +262,10 @@ bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
       this->pos.y < this->minBounds.y || this->pos.y > this->maxBounds.y ||
       this->pos.z < this->minBounds.z || this->pos.z > this->maxBounds.z) {
     return false;
+  }
+
+  if (Math_Vec3f_DistXZ(&pos, &gHorseHead) < 40.0f) {
+      return false;
   }
 
   return true;
