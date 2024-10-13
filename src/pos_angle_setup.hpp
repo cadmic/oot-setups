@@ -101,7 +101,7 @@ struct PosAngleSetup {
                 Vec3f minBounds, Vec3f maxBounds);
   PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle);
 
-  void addCollider(Vec3s pos, s16 objectRadius, f32 dispRatio);
+  void addCollider(Collider collider);
 
   // Returns true if the action was performed successfully.
   bool performAction(Action action);

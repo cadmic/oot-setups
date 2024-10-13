@@ -191,8 +191,8 @@ PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle)
                     Vec3f(-10000, -10000, -10000), Vec3f(10000, 10000, 10000)) {
 }
 
-void PosAngleSetup::addCollider(Vec3s pos, s16 objectRadius, f32 dispRatio) {
-  this->colliders.push_back({pos, objectRadius, dispRatio});
+void PosAngleSetup::addCollider(Collider collider) {
+  this->colliders.push_back(collider);
 }
 
 bool PosAngleSetup::ensureTargeted() {

@@ -87,6 +87,8 @@ struct SearchParams {
   // Bounds for position during the setup.
   Vec3f minBounds;
   Vec3f maxBounds;
+  // Colliders that could push Link.
+  std::vector<Collider> colliders;
   // List of initial positions and angles.
   std::vector<std::pair<Vec3f, u16>> starts;
   // Maximum setup cost (in order to limit search space).
@@ -270,6 +272,9 @@ void searchSetups(const SearchParams& params, Filter filter, Output output) {
 
     PosAngleSetup setup(params.col, state.startPos, state.startAngle,
                         params.minBounds, params.maxBounds);
+    for (const Collider& c : params.colliders) {
+      setup.addCollider(c);
+    }
     doSearch(params, &state, setup, 0, filter, output);
   }
 
@@ -320,6 +325,9 @@ void searchSetupsShard(const SearchParams& params, int depth, int shard,
 
   PosAngleSetup setup(params.col, state.startPos, state.startAngle,
                       params.minBounds, params.maxBounds);
+  for (const Collider& c : params.colliders) {
+    setup.addCollider(c);
+  }
   doSearch(params, &state, setup, 0, filter, output);
 
   fprintf(stderr, "tested=%llu close=%llu found=%llu shard=%d\n", state.tested,
