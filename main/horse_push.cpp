@@ -619,12 +619,22 @@ bool testSetup(Collision* col, Vec3f pos, u16 angle, Vec3s horseBody, const std:
     return false;
 }
 
-Vec3s generateHorseBody(Vec3f pos, u16 angle) {
+Vec3s generateHorseBody1(Vec3f pos, u16 angle) {
     pos.y -= 11.25f;  // gravity
     Vec3s bodyPos = pos.toVec3s();
 
     bodyPos.x += (s16)(Math_SinS(angle) * 11.0f);
     bodyPos.z += (s16)(Math_CosS(angle) * 11.0f);
+
+    return bodyPos;
+}
+
+Vec3s generateHorseBody2(Vec3f pos, u16 angle) {
+    pos.y -= 11.25f;  // gravity
+    Vec3s bodyPos = pos.toVec3s();
+
+    bodyPos.x += (s16)(Math_SinS(angle) * -18.0f);
+    bodyPos.z += (s16)(Math_CosS(angle) * -18.0f);
 
     return bodyPos;
 }
@@ -674,7 +684,7 @@ void searchRolls(Collision* col) {
 
                 fprintf(stderr, "horse: angle=%04x x=%.9g z=%.9g\n", horseAngle, horsePos.x, horsePos.z);
 
-                Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+                Vec3s horseBody = generateHorseBody1(horsePos, horseAngle);
                 std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
                 s16 headX = horseHeads[27].x;
                 s16 headZ = horseHeads[27].z;
@@ -710,7 +720,7 @@ void searchRollsWithHorsePosition(Collision* col, Vec3f horsePos, u16 horseAngle
         .zStep = 0.2f,
     };
 
-    Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+    Vec3s horseBody = generateHorseBody1(horsePos, horseAngle);
     std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
     searchPosAngleRange(range, [&](u16 angle, f32 x, f32 z) {
         bool found = false;
@@ -1048,14 +1058,26 @@ std::vector<HorseSetup> horseSetups = {
 };
 
 void findSetups(Collision* col, const HorseSetup& horseSetup) {
+    u16 horseAngle = horseSetup.angle;
+    Vec3f horsePos = {horseSetup.horseX, 0, horseSetup.horseZ};
+    Vec3f linkPos = {horseSetup.linkX, 0, horseSetup.linkZ};
+
+    Vec3s horseBody1 = generateHorseBody1(horsePos, horseAngle);
+    Vec3s horseBody2 = generateHorseBody2(horsePos, horseAngle);
+    std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
+
     SearchParams params = {
         .col = col,
-        .minBounds = {-10000, 400, -10000},
+        .minBounds = {-10000, 0, -10000},
         .maxBounds = {10000, 10000, 10000},
+        .colliders = {
+            {horseBody1, 20, 1.0f},
+            {horseBody2, 20, 1.0f},
+        },
         .starts =
             {
-                {{horseSetup.linkX, 0, horseSetup.linkZ}, horseSetup.angle},
-                {{horseSetup.linkX, 0, horseSetup.linkZ}, horseSetup.angle - 0x4000},
+                {linkPos, horseAngle},
+                {linkPos, horseAngle - 0x4000},
             },
         .maxCost = 70,
         .angleMin = 0x3800,
@@ -1092,14 +1114,17 @@ void findSetups(Collision* col, const HorseSetup& horseSetup) {
         bool found = false;
         Vec3f pos = setup.pos;
         u16 angle = setup.angle;
-        if (testJumpslashClip(col, pos, angle, holdUp, false)) {
+        int neighFrame;
+        int strainDir;
+        bool nonCrit;
+        if (testSetup(col, pos, angle, horseBody1, horseHeads, &neighFrame, &strainDir, &nonCrit, false)) {
             printf(
-                "cost=%d initialx=%.9g (%08x) initialz=%.9g (%08x) "
-                "initialAngle=%04x x=%.9g (%08x) z=%.9g (%08x) angle=%04x "
-                "holdUp=%d actions=%s\n",
-                cost, initialPos.x, floatToInt(initialPos.x), initialPos.z,
-                floatToInt(initialPos.z), initialAngle, pos.x, floatToInt(pos.x),
-                pos.z, floatToInt(pos.z), angle, holdUp,
+                "cost=%d horseX=%.9g (%08x) horseZ=%.9g (%08x) horseAngle=%04x "
+                "initialX=%.9g (%08x) initialZ=%.9g (%08x) initialAngle=%04x "
+                "x=%.9g (%08x) z=%.9g (%08x) angle=%04x neighFrame=%d strainDir=%d nonCrit=%d actions=%s\n",
+                cost, horseSetup.horseX, floatToInt(horseSetup.horseX), horseSetup.horseZ, floatToInt(horseSetup.horseZ), horseAngle,
+                initialPos.x, floatToInt(initialPos.x), initialPos.z, floatToInt(initialPos.z), initialAngle,
+                pos.x, floatToInt(pos.x), pos.z, floatToInt(pos.z), angle, neighFrame, strainDir, nonCrit,
                 actionNames(actions).c_str());
             fflush(stdout);
             found = true;
@@ -1123,7 +1148,7 @@ int main(int argc, char* argv[]) {
     // u16 horseAngle = 0x48b1;
     // Vec3f linkPos = {intToFloat(0x43954000), 37, intToFloat(0xc45ed814)};
     // u16 linkAngle = 0xf93e;
-    // Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+    // Vec3s horseBody = generateHorseBody1(horsePos, horseAngle);
     // std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
     // int neighFrame;
     // int strainDir;
@@ -1134,7 +1159,7 @@ int main(int argc, char* argv[]) {
     // u16 horseAngle = 0x9600;
     // Vec3f linkPos = {288, 37, -846};
     // u16 linkAngle = 0x4b00;
-    // Vec3s horseBody = generateHorseBody(horsePos, horseAngle);
+    // Vec3s horseBody = generateHorseBody1(horsePos, horseAngle);
     // std::vector<Vec3s> horseHeads = generateHorseHeads(horsePos, horseAngle);
     // int neighFrame;
     // int strainDir;
@@ -1148,7 +1173,12 @@ int main(int argc, char* argv[]) {
     // testHorse(&col);
     // testHorseWalks(&col);
 
-    searchRollsWithHorseSetups(&col);
+    // searchRollsWithHorseSetups(&col);
+
+    if (argc > 1) {
+        int index = strtoul(argv[1], NULL, 0);
+        findSetups(&col, horseSetups[index]);
+    }
 
     return 0;
 }
