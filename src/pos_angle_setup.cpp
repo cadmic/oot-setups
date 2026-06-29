@@ -430,7 +430,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
   PlayerAge age = this->col->age;
   f32 swordLength = stick ? 5000.0f : (age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f);
 
-  Vec3f prevRoot = baseRootTranslation(PLAYER_AGE_CHILD, this->angle);
+  Vec3f prevRoot = baseRootTranslation(age, this->angle);
   Vec3f prevPos = this->pos;
   f32 speed = 0.0f;
 
