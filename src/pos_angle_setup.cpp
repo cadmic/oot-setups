@@ -248,10 +248,9 @@ bool PosAngleSetup::move(Vec3f prevPos, u16 movementAngle, f32 xzSpeed,
 
   Vec3f intendedPos = translate(pos, movementAngle, xzSpeed, ySpeed, displacement);
 
-  CollisionPoly* wallPoly;
   f32 floorHeight;
   this->pos =
-      this->col->runChecks(prevPos, intendedPos, &wallPoly, &this->floorPoly,
+      this->col->runChecks(prevPos, intendedPos, &this->wallPoly, &this->floorPoly,
                            &this->dynaId, &floorHeight);
   *onGround = ySpeed <= 0.0f && this->pos.y <= floorHeight;
 
