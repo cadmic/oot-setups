@@ -69,11 +69,20 @@ int actionCost(Action action) {
       return 12;
     case FORWARD_STAB_SHIELD:
       return 9;
+    case STICK_SLASH:
+    case STICK_FORWARD_SLASH:
+      return 15;
+    case STICK_SLASH_SHIELD:
+    case STICK_FORWARD_SLASH_SHIELD:
+      return 10;
     case JUMPSLASH:
+    case STICK_JUMPSLASH:
       return 32;
     case JUMPSLASH_SHIELD:
+    case STICK_JUMPSLASH_SHIELD:
       return 20;
     case LONG_JUMPSLASH_SHIELD:
+    case STICK_LONG_JUMPSLASH_SHIELD:
       return 24;
     case CROUCH_STAB:
       return 8;
@@ -160,6 +169,13 @@ SwordSlash jumpslashLanding = {
     .startAnimFrames = 9,
     .endAnimData = gPlayerAnim_link_fighter_power_jump_kiru_end_Data,
     .endAnimFrames = 20,
+};
+
+SwordSlash stickSlash = {
+  .startAnimData = gPlayerAnim_link_fighter_Lnormal_kiru_Data,
+  .startAnimFrames = 5,
+  .endAnimData = gPlayerAnim_link_fighter_Lnormal_kiru_end_Data,
+  .endAnimFrames = 9,
 };
 
 PosAngleSetup::PosAngleSetup(Collision* col, Vec3f initialPos, u16 initialAngle,
@@ -406,13 +422,13 @@ bool PosAngleSetup::jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed) {
 }
 
 bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
-                               bool lunge, bool shield) {
+                               bool lunge, bool shield, bool stick) {
   if (requiresTarget && !ensureTargeted()) {
     return false;
   }
 
   PlayerAge age = this->col->age;
-  f32 swordLength = age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f;
+  f32 swordLength = stick ? 5000.0f : (age == PLAYER_AGE_CHILD ? 3000.0f : 4000.0f);
 
   Vec3f prevRoot = baseRootTranslation(PLAYER_AGE_CHILD, this->angle);
   Vec3f prevPos = this->pos;
@@ -428,6 +444,10 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
     if (curFrame >= 2) {
       swordHit =
           weaponRecoil(this->col, &animFrame, age, swordLength, this->pos, this->angle);
+    }
+
+    if (swordHit && stick) {
+      return false;
     }
 
     bool onGround;
@@ -484,7 +504,7 @@ bool PosAngleSetup::swordSlash(const SwordSlash& slash, bool requiresTarget,
   return true;
 }
 
-bool PosAngleSetup::jumpslash(bool holdUp, bool shield) {
+bool PosAngleSetup::jumpslash(bool holdUp, bool shield, bool stick) {
   if (!ensureTargeted()) {
     return false;
   }
@@ -511,7 +531,7 @@ bool PosAngleSetup::jumpslash(bool holdUp, bool shield) {
     }
   }
 
-  return swordSlash(jumpslashLanding, false, false, shield);
+  return swordSlash(jumpslashLanding, false, false, shield, stick);
 }
 
 bool PosAngleSetup::crouchStab() {
@@ -611,27 +631,41 @@ bool PosAngleSetup::doAction(Action action) {
       }
       return roll(this->angle + 0x8000, true);
     case HORIZONTAL_SLASH:
-      return swordSlash(horizontalSlash, false, false, false);
+      return swordSlash(horizontalSlash, false, false, false, false);
     case HORIZONTAL_SLASH_SHIELD:
-      return swordSlash(horizontalSlash, false, false, true);
+      return swordSlash(horizontalSlash, false, false, true, false);
     case DIAGONAL_SLASH:
-      return swordSlash(diagonalSlash, true, false, false);
+      return swordSlash(diagonalSlash, true, false, false, false);
     case DIAGONAL_SLASH_SHIELD:
-      return swordSlash(diagonalSlash, true, false, true);
+      return swordSlash(diagonalSlash, true, false, true, false);
     case VERTICAL_SLASH:
-      return swordSlash(verticalSlash, true, false, false);
+      return swordSlash(verticalSlash, true, false, false, false);
     case VERTICAL_SLASH_SHIELD:
-      return swordSlash(verticalSlash, true, false, true);
+      return swordSlash(verticalSlash, true, false, true, false);
     case FORWARD_STAB:
-      return swordSlash(forwardStab, true, true, false);
+      return swordSlash(forwardStab, true, true, false, false);
     case FORWARD_STAB_SHIELD:
-      return swordSlash(forwardStab, true, true, true);
+      return swordSlash(forwardStab, true, true, true, false);
+    case STICK_SLASH:
+      return swordSlash(stickSlash, false, false, false, true);
+    case STICK_SLASH_SHIELD:
+      return swordSlash(stickSlash, false, false, true, true);
+    case STICK_FORWARD_SLASH:
+      return swordSlash(stickSlash, false, true, false, true);
+    case STICK_FORWARD_SLASH_SHIELD:
+      return swordSlash(stickSlash, false, true, true, true);
     case JUMPSLASH:
-      return jumpslash(false, false);
+      return jumpslash(false, false, false);
     case JUMPSLASH_SHIELD:
-      return jumpslash(false, true);
+      return jumpslash(false, true, false);
     case LONG_JUMPSLASH_SHIELD:
-      return jumpslash(true, true);
+      return jumpslash(true, true, false);
+    case STICK_JUMPSLASH:
+      return jumpslash(false, false, true);
+    case STICK_JUMPSLASH_SHIELD:
+      return jumpslash(false, true, true);
+    case STICK_LONG_JUMPSLASH_SHIELD:
+      return jumpslash(true, true, true);
     case CROUCH_STAB:
       return crouchStab();
     case ROTATE_ESS_LEFT:

@@ -33,6 +33,13 @@
   X(JUMPSLASH)                       \
   X(JUMPSLASH_SHIELD)                \
   X(LONG_JUMPSLASH_SHIELD)           \
+  X(STICK_SLASH)                     \
+  X(STICK_SLASH_SHIELD)              \
+  X(STICK_FORWARD_SLASH)             \
+  X(STICK_FORWARD_SLASH_SHIELD)      \
+  X(STICK_JUMPSLASH)                 \
+  X(STICK_JUMPSLASH_SHIELD)          \
+  X(STICK_LONG_JUMPSLASH_SHIELD)     \
   X(CROUCH_STAB)                     \
   X(ROTATE_ESS_LEFT)                 \
   X(ROTATE_ESS_RIGHT)                \
@@ -121,8 +128,8 @@ struct PosAngleSetup {
   bool shieldScoot();
   bool jump(u16 movementAngle, f32 xzSpeed, f32 ySpeed);
   bool swordSlash(const SwordSlash& slash, bool requiresTarget, bool lunge,
-                  bool shield);
-  bool jumpslash(bool holdUp, bool shield);
+                  bool shield, bool stick);
+  bool jumpslash(bool holdUp, bool shield, bool stick);
   bool crouchStab();
 
   bool doAction(Action action);
