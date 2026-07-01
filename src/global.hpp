@@ -16,6 +16,7 @@
 #define M_SQRT2 1.41421356237309504880f
 
 #define DEG_TO_RAD(degrees) ((degrees) * (M_PI / 180.0f))
+#define BINANG_TO_RAD(binang) ((f32)(s16)(binang) * (M_PI / 0x8000))
 
 #define SHT_MAX 32767.0f
 #define SHT_MINV (1.0f / SHT_MAX)
