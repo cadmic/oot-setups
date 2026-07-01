@@ -533,35 +533,30 @@ void Math_ApproachZeroF(f32 *pValue, f32 fraction, f32 step) {
  * equal when the target is reached. Returns true when target is reached, false
  * otherwise.
  */
-bool Math_ScaledStepToS(u16 *pValue, u16 target, s16 step) {
-  // Rewritten to use u16 (since this is mostly used for angles) and to avoid
-  // undefined behavior.
+bool Math_ScaledStepToS_Original(s16* pValue, s16 target, s16 step) {
   if (step != 0) {
     f32 updateScale = 1.5f;
-    u16 update = step * updateScale;
 
-    u16 diff = *pValue - target;
-    if (diff < 0x8000) {
-      if (update < diff) {
-        *pValue -= update;
-        return false;
-      } else {
-        *pValue = target;
-        return true;
-      }
-    } else {
-      diff = -diff;
-      if (update < diff) {
-        *pValue += update;
-        return false;
-      } else {
-        *pValue = target;
-        return true;
-      }
+    if ((s16)(*pValue - target) > 0) {
+      step = -step;
     }
+
+    *pValue += (s16)(step * updateScale);
+
+    if (((s16)(*pValue - target) * step) >= 0) {
+      *pValue = target;
+      return true;
+    }
+  } else if (target == *pValue) {
+    return true;
   }
 
-  return target == *pValue;
+  return false;
+}
+
+// Version with u16 (since this is mostly used for angles)
+bool Math_ScaledStepToS(u16 *pValue, u16 target, s16 step) {
+  return Math_ScaledStepToS_Original((s16*)pValue, (s16)target, step);
 }
 
 /**
